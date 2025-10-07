@@ -17,9 +17,9 @@ import toast from "react-hot-toast";
 import {
   fetchProductCategories,
   addProduct,
-  uploadImageToCloudinary,
+  productSchema
 } from "../../api/productApi";
-import { productSchema } from "../../validation/productValidation";
+
 
 const AddProductForm = ({ onClose, onProductAdded }) => {
   const { categoryId } = useParams();
@@ -30,7 +30,7 @@ const AddProductForm = ({ onClose, onProductAdded }) => {
     cost: "",
     image: "",
   });
-  const [preview, setPreview] = useState("");
+  // const [preview, setPreview] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -59,9 +59,9 @@ const AddProductForm = ({ onClose, onProductAdded }) => {
 
     setIsUploading(true);
     try {
-      const uploaded = await uploadImageToCloudinary(file);
-      setFormData((prev) => ({ ...prev, image: uploaded.url }));
-      setPreview(uploaded.url);
+
+      setFormData((prev) => ({ ...prev}));
+   
       // toast.success("Image uploaded successfully");
     } catch (err) {
       console.error(err);
@@ -197,13 +197,13 @@ const AddProductForm = ({ onClose, onProductAdded }) => {
                   className="sr-only"
                 />
               </label>
-              {preview && (
+              {/* {preview && (
                 <img
                   src={preview}
                   alt="Preview"
                   className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-cover rounded-md border"
                 />
-              )}
+              )} */}
             </div>
           </div>
 

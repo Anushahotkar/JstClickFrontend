@@ -3,8 +3,8 @@ import { useState } from "react";
 import { FaBox, FaSave, FaSpinner, FaTimes } from "react-icons/fa";
 import { MdCloudUpload } from "react-icons/md";
 import toast from "react-hot-toast"; // ✅ toast
-import { updateProductCategory } from "../../api/categoryApi";
-import { editCategorySchema } from "../../validation/category.validation";
+import { updateProductCategory,editCategorySchema  } from "../../api/categoryApi";
+
 
 const backendUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -45,15 +45,36 @@ const EditProductCategoryForm = ({ category, onSave, onCancel }) => {
 
       if (newImageFile) formData.append("image", newImageFile);
 
-      const updatedCategory = await updateProductCategory(category._id, formData);
+     const updatedCategory = await updateProductCategory(category._id, formData);
 
-      toast.success(`Product category "${updatedCategory.name}" updated successfully! 🎉`); // ✅ success toast
-      onSave(updatedCategory);
-      onCancel();
-    } catch (err) {
-      console.error(err);
-      toast.error(err?.message || "Failed to update product category ❌"); // ✅ error toast
-    } finally {
+// Update preview image with backend URL if a new image was uploaded
+// Update preview image with backend URL if a new image was uploaded
+if (updatedCategory.data.image) {
+  setPreviewImage(
+    updatedCategory.data.image.startsWith("http")
+      ? updatedCategory.data.image
+      : `${backendUrl}${updatedCategory.data.image}`
+  );
+}
+
+
+// Use the correct path for toast
+toast.success(`Product category "${updatedCategory.data.name}" updated successfully! 🎉`);
+
+onSave(updatedCategory.data);
+onCancel();
+
+    } 
+    catch (err) {
+  console.error(err);
+  
+  const message =
+    err.response?.data?.message || err.message || "Failed to update product category ❌";
+
+  toast.error(message);
+}
+
+    finally {
       setIsSubmitting(false);
     }
   };

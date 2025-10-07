@@ -3,8 +3,8 @@ import { useState, useEffect, useRef } from "react";
 import { MdClose } from "react-icons/md";
 import { FaRupeeSign, FaPen, FaFileImage, FaTag, FaSave, FaInfoCircle } from "react-icons/fa";
 import { useParams } from "react-router-dom";
-import { fetchCategoryById, updateService } from "../../api/servicesApi";
-import { serviceSchema } from "../../validation/serviceValidation";
+import { fetchCategoryById, updateService,serviceSchema } from "../../api/servicesApi";
+// import { serviceSchema } from "../../validation/serviceValidation";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 

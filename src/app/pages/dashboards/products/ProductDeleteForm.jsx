@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { FaTrash, FaTimes, FaCheckCircle } from "react-icons/fa";
-import { deleteProduct, deleteImagesFromCloudinary } from "../../api/productApi";
+import { deleteProduct} from "../../api/productApi";
 
 const ProductDeleteForm = ({ product, onCancel, onDeleted }) => {
   const [toast, setToast] = useState(null);
@@ -21,9 +21,9 @@ const ProductDeleteForm = ({ product, onCancel, onDeleted }) => {
       await deleteProduct(product._id);
 
       // Delete images from Cloudinary if any
-      if (product.images?.length) {
-        await deleteImagesFromCloudinary(product.images);
-      }
+      // if (product.images?.length) {
+      //   await deleteImagesFromCloudinary(product.images);
+      // }
 
       showToast("Product deleted successfully!", "success");
       onDeleted(product._id); // ✅ notify parent

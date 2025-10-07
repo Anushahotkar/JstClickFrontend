@@ -1,37 +1,41 @@
 // src/api/serviceProvidersApi.js
 import Joi from "joi";
+import api from "./authApi"; // use the centralized axios instance
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+// src/validations/providerAction.validation.js
+
+
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Fetch all service providers
+// Fetch all service providers
 export const fetchServiceProviders = async () => {
-  const token = localStorage.getItem("authToken");
-  const res = await fetch(`${API_BASE_URL}/admin/api/serviceProvider/serviceproviders`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Failed to fetch service providers");
-  return data.data;
+  try {
+    const res = await api.get("/admin/api/serviceProvider/serviceproviders");
+    return res.data.data || [];
+  } catch (err) {
+    throw new Error(err.response?.data?.message || err.message || "Failed to fetch service providers");
+  }
 };
 
 // Update provider action
-export const updateProviderAction = async (id, action) => {
-  const token = localStorage.getItem("authToken");
-  const res = await fetch(`${API_BASE_URL}/admin/api/serviceProvider/services/${id}/action`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ action }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || "Failed to update action");
-  return data;
+export const updateProviderAction = async (id, action, reason) => {
+  try {
+    const res = await api.patch(`/admin/api/serviceProvider/services/${id}/action`, {
+      action,
+      reason,
+    });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || err.message || "Failed to update provider action");
+  }
 };
 
 // Joi validation schema
 export const providerActionSchema = Joi.object({
-  action: Joi.string().valid("Approved", "Disapproved", "Suspended", "Pending").required(),
+  action: Joi.string()
+  .valid("Approved", "Disapproved", "Suspended", "Pending")
+  .required(),
   reason: Joi.string().allow("").max(200),
 });

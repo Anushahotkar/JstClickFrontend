@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { MdAddCircleOutline, MdCloudUpload } from "react-icons/md";
 import { VscSymbolNamespace } from "react-icons/vsc";
-import { createServiceCategory } from "../../api/categoryApi";
+import { createServiceCategory,serviceCategorySchema } from "../../api/categoryApi";
 import { toast } from "react-hot-toast"; // <-- import toast
 
 const AddServiceForm = ({ onClose, onServiceAdded }) => {
@@ -21,8 +21,10 @@ const AddServiceForm = ({ onClose, onServiceAdded }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name || !image) {
-      toast.error("Please provide a name and select an image."); // <-- error toast
+  // ✅ Joi validation
+    const { error } = serviceCategorySchema.validate({ name, image }, { abortEarly: false });
+    if (error) {
+      toast.error(error.details.map((d) => d.message).join("\n"));
       return;
     }
 
@@ -34,7 +36,11 @@ const AddServiceForm = ({ onClose, onServiceAdded }) => {
       onClose();
     } catch (error) {
       console.error(error);
-      toast.error(`Failed to add service: ${error.message}`); // <-- error toast
+      // ✅ Extract backend message or fallback to generic error
+      const message =
+        error.response?.data?.message || error.message || "Failed to add service category ❌";
+
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -66,7 +72,7 @@ const AddServiceForm = ({ onClose, onServiceAdded }) => {
               placeholder="e.g., Electrical"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              required
+              // required
               className="w-full rounded-lg border border-gray-300 bg-gray-50 pl-10 pr-4 py-3 text-sm text-gray-900
                          focus:border-violet-500 focus:ring-1 focus:ring-violet-500 focus:outline-none"
             />

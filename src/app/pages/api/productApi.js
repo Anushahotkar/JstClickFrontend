@@ -2,13 +2,70 @@ import axios from "axios";
 import Joi from "joi";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/upload`;
-const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-const CLOUDINARY_API_KEY = import.meta.env.VITE_CLOUDINARY_API_KEY;
+// const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/upload`;
+// const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+// const CLOUDINARY_API_KEY = import.meta.env.VITE_CLOUDINARY_API_KEY;
 // ------------------------------
 // Joi validation schema for product
 // ------------------------------
-import { productSchema } from "../validation/productValidation";
+
+
+export const productSchema = Joi.object({
+  name: Joi.string().min(2).max(100).required().messages({
+    "string.empty": "Product name is required",
+    "string.min": "Product name should be at least 2 characters",
+    "string.max": "Product name should not exceed 100 characters",
+  }),
+  category: Joi.string().required().messages({
+    "any.required": "Category is required",
+  }),
+  cost: Joi.number().min(0).required().messages({
+    "number.base": "Cost must be a number",
+    "number.min": "Cost must be greater than or equal to 0",
+    "any.required": "Cost is required",
+  }),
+  description: Joi.string().allow("").max(500).messages({
+    "string.max": "Description should not exceed 500 characters",
+  }),
+  image: Joi.string().uri().required().messages({
+    "any.required": "Product image is required",
+  }),
+});
+
+
+export const editProductSchema = Joi.object({
+  name: Joi.string().min(2).max(100).required().messages({
+    "string.empty": "Product name is required",
+    "string.min": "Product name should be at least 2 characters",
+    "string.max": "Product name should not exceed 100 characters",
+  }),
+  category: Joi.string().required().messages({
+    "any.required": "Category is required",
+  }),
+  cost: Joi.number().min(0).required().messages({
+    "number.base": "Cost must be a number",
+    "number.min": "Cost must be greater than or equal to 0",
+    "any.required": "Cost is required",
+  }),
+  description: Joi.string().allow("").max(500).messages({
+    "string.max": "Description should not exceed 500 characters",
+  }),
+   // ✅ must be either valid URL (string) or a File (any)
+image: Joi.alternatives()
+  .try(
+    Joi.object().instance(File),    // File from input
+    Joi.string().pattern(/^https?:\/\/.+/) // Accepts http or https URLs only
+  )
+  .required()
+  .messages({
+    "any.required": "Product image is required",
+    "string.pattern.base": "Invalid image URL",
+  }),
+
+
+});
+
+
 
 // ------------------------------
 // Fetch products by category
@@ -64,21 +121,7 @@ export const addProduct = async (productData) => {
 // ------------------------------
 // Upload image to Cloudinary
 // ------------------------------
-export const uploadImageToCloudinary = async (file) => {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
-  try {
-    const res = await fetch(CLOUDINARY_URL, { method: "POST", body: formData });
-    const data = await res.json();
-    if (!data.secure_url) throw new Error("Cloudinary upload failed");
-    return { url: data.secure_url, publicId: data.public_id };
-  } catch (err) {
-    console.error(err);
-    throw new Error("Cloudinary upload failed");
-  }
-};
 
 // Edit product
 export const editProduct = async (productId, formData) => {
@@ -99,23 +142,7 @@ export const deleteProduct = async (productId) => {
   return res.data;
 };
 
-// Delete images from Cloudinary
-export const deleteImagesFromCloudinary = async (images) => {
-  if (!images) return;
-  const imageArray = Array.isArray(images) ? images : [images];
 
-  for (const url of imageArray) {
-    try {
-      await fetch(`https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/destroy`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file: url, api_key: CLOUDINARY_API_KEY }),
-      });
-    } catch (err) {
-      console.error("Failed to delete image:", url, err);
-    }
-  }
-};
 
 // Joi validation
 export const validateProductDelete = (product) => {

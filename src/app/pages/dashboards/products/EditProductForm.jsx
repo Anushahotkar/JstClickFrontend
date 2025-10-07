@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { MdClose } from "react-icons/md";
-import { FaRupeeSign, FaPen, FaFileImage, FaTag, FaSave, FaInfoCircle } from "react-icons/fa";
+import { FaRupeeSign,FaSpinner, FaPen, FaFileImage, FaTag, FaSave, FaInfoCircle } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { fetchProductCategories, editProduct, uploadImageToCloudinary } from "../../api/productApi";
-import { editProductSchema } from "../../validation/productValidation";
+import { fetchProductCategories, 
+  editProduct, 
+  editProductSchema } from "../../api/productApi";
+
 
 const EditProductForm = ({ productData, onClose, onProductUpdated }) => {
   const { categoryId } = useParams();
@@ -41,13 +43,18 @@ const EditProductForm = ({ productData, onClose, onProductUpdated }) => {
   };
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setIsUploading(true);
-    fileRef.current = file;
+  const file = e.target.files[0];
+  if (!file) return;
+  setIsUploading(true);
+  fileRef.current = file;
+
     try {
-      const { url } = await uploadImageToCloudinary(file);
-      setFormData((prev) => ({ ...prev, image: file, preview: url }));
+
+     setFormData((prev) => ({
+    ...prev,
+    image: file,
+    preview: URL.createObjectURL(file), // <-- this shows the new preview
+  }));
     } catch (err) {
       console.error(err);
       toast.error(err.message || "Image upload failed");
@@ -56,20 +63,27 @@ const EditProductForm = ({ productData, onClose, onProductUpdated }) => {
     }
   };
 
-  const getPreviewUrl = (preview) => (preview?.startsWith("http") ? preview : API_BASE_URL + preview);
+  const getPreviewUrl = (preview) => {
+  if (!preview) return "";
+  if (preview.startsWith("blob:")) return preview; // ✅ keep blob URLs as is
+  if (preview.startsWith("http")) return preview; // full URL from backend
+  return API_BASE_URL + preview; // relative path from backend
+};
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Validate using URL instead of File
-    const { error } = editProductSchema.validate({
-      ...formData,
-      category: category?._id,
-      image: formData.preview, // ✅ fix for ValidationError
-    },
-  { abortEarly: false, stripUnknown: true } // 👈 strips "preview"
-  );
+// Determine the value to validate for image
+const imageToValidate = fileRef.current ? fileRef.current : formData.preview;
+
+const { error } = editProductSchema.validate({
+  ...formData,
+  category: category?._id,
+  image: imageToValidate, // ✅ File or URL
+}, { abortEarly: false, stripUnknown: true });
+
 
     if (error) {
       console.log(error);
@@ -203,12 +217,13 @@ const EditProductForm = ({ productData, onClose, onProductUpdated }) => {
             >
               Cancel
             </button>
-            <button
+             <button
               type="submit"
               disabled={isSubmitting || isUploading}
               className="w-full sm:w-auto px-3 sm:px-4 py-2 text-sm sm:text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 flex items-center justify-center gap-2"
             >
-              <FaSave /> {isSubmitting ? "Saving..." : "Save"}
+              {isSubmitting && <FaSpinner className="animate-spin" />}
+              {isSubmitting ? "Saving..." : <><FaSave /> Save</>}
             </button>
           </div>
         </form>

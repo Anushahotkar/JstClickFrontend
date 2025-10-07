@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { FaTrash, FaTimes } from "react-icons/fa";
-import { deleteServiceCategory } from "../../api/categoryApi";
+import { deleteServiceCategory,deleteCategorySchema } from "../../api/categoryApi";
 import toast from "react-hot-toast";
-import { deleteCategorySchema } from "../../validation/category.validation";
+// import { deleteCategorySchema } from "../../validation/category.validation";
 
 const ServiceCategoryDeleteForm = ({ serviceCategory, onCancel, onDeleted }) => {
   const [loading, setLoading] = useState(false);

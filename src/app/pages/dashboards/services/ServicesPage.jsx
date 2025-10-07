@@ -137,10 +137,14 @@ const loadServices = useCallback(async () => {
         )}
       </div>
 
-      {/* Add Service Modal */}
-      <Modal isOpen={addModalOpen} onClose={() => setAddModalOpen(false)}>
-        <AddServiceForm onClose={() => setAddModalOpen(false)} onServiceAdded={handleServiceAdded} />
-      </Modal>
+    {/* Add Service Modal */}
+<Modal isOpen={addModalOpen} onClose={() => setAddModalOpen(false)}>
+  <AddServiceForm
+    onClose={() => setAddModalOpen(false)}
+    onServiceAdded={handleServiceAdded}
+    showToast={showToast} // <-- pass toast function
+  />
+</Modal>
 
       {/* Edit Service Modal */}
       {selectedService && (

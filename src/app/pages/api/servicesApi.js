@@ -1,86 +1,100 @@
 // src/api/servicesApi.js
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "");
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "");
+import api from "./authApi";
+import Joi from "joi";
+
+export const serviceSchema = Joi.object({
+  name: Joi.string().required().messages({
+    "string.empty": `"name" is required`,
+  }),
+  description: Joi.string().allow(""),
+  cost: Joi.number().required().messages({
+    "number.base": `"cost" must be a number`,
+    "any.required": `"cost" is required`,
+  }),
+  category: Joi.string().required().messages({
+    "string.empty": `"category" is required`,
+  }),
+ user: Joi.string().optional(),
+userType: Joi.string().optional(),
+
+  image: Joi.any()
+  .custom((file, helpers) => {
+    if (!file) return file;
+    const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/avif", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      return helpers.error("any.invalid");
+    }
+    return file;
+  })
+  .allow(null)
+  .messages({
+    "any.invalid": `"image" must be a valid image file`,
+  }),
+
+});
 
 
 export const getAuthToken = () => localStorage.getItem("authToken");
 
 // Fetch categories
+// Fetch all service categories
 export const fetchCategories = async () => {
-  const token = getAuthToken();
-  const res = await fetch(`${API_BASE_URL}/admin/api/category/service-categories`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error("Failed to fetch categories");
-  return res.json();
+  try {
+    const res = await api.get("/admin/api/category/service-categories");
+    return res.data; // backend should return { data: [...] }
+  } catch (err) {
+    throw new Error(err.response?.data?.message || "Failed to fetch categories");
+  }
 };
 
 // Fetch services for a category
+// Fetch services for a specific category
 export const fetchCategoryServices = async (categoryId) => {
-  const token = getAuthToken();
-  if (!token) throw new Error("No auth token found");
-
-  const res = await fetch(`${API_BASE_URL}/admin/api/services/service-categories/${categoryId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Failed to fetch services: ${res.status} - ${text}`);
+  try {
+    const res = await api.get(`/admin/api/services/service-categories/${categoryId}`);
+    return res.data.data || [];
+  } catch (err) {
+    throw new Error(err.response?.data?.message || `Failed to fetch services`);
   }
-
-  const servData = await res.json();
-  return servData.data || [];
 };
 
 
 
 // Delete service
+// Delete a service
 export const deleteService = async (serviceId) => {
-  const token = getAuthToken();
-  const res = await fetch(`${API_BASE_URL}/admin/services/${serviceId}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error("Failed to delete service");
-  return res.json();
+  try {
+    const res = await api.delete(`/admin/services/${serviceId}`);
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || "Failed to delete service");
+  }
 };
 
 // Create a new service
 // Create a new service
 export const createService = async (serviceData) => {
-  const token = getAuthToken();
-  const res = await fetch(`${API_BASE_URL}/admin/api/services/services`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`, // no Content-Type header
-    },
-    body: serviceData, // send FormData directly
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Failed to create service: ${res.status} - ${text}`);
+  try {
+    const res = await api.post("/admin/api/services/services", serviceData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || `Failed to create service`);
   }
-
-  return res.json();
 };
 
 // Update an existing service
 export const updateService = async (serviceId, serviceData) => {
-  const token = getAuthToken();
-  const res = await fetch(`${API_BASE_URL}/admin/services/${serviceId}`, {
-    method: "PUT",
-    headers: { Authorization: `Bearer ${token}` }, // FormData handles Content-Type
-    body: serviceData,
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Failed to update service: ${res.status} - ${text}`);
+  try {
+    const res = await api.put(`/admin/services/${serviceId}`, serviceData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return res.data.data || res.data.service;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || `Failed to update service`);
   }
-
-  const data = await res.json();
-  return data.data || data.service;
 };
 
 // Fetch single category by ID

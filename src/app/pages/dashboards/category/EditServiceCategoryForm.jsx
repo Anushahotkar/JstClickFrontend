@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { MdEdit, MdCloudUpload } from "react-icons/md";
 import { FaSave, FaSpinner, FaTimes } from "react-icons/fa";
-import { uploadServiceCategoryImage, updateServiceCategory } from "../../api/categoryApi";
-import { serviceCategorySchema } from "../../validation/category.validation";
+import {  updateServiceCategory, serviceCategorySchema } from "../../api/categoryApi";
+// import { serviceCategorySchema } from "../../validation/category.validation";
 import { toast } from "react-hot-toast";
 
 const EditServiceCategoryForm = ({ category, onSave, onCancel }) => {
@@ -51,26 +51,18 @@ const EditServiceCategoryForm = ({ category, onSave, onCancel }) => {
     }
 
     try {
-      let finalImageUrl = previewImage;
-
-      if (newImageFile) {
-        const uploadResult = await uploadServiceCategoryImage(newImageFile);
-        finalImageUrl = uploadResult.url;
-      }
-
       const updatedCategory = await updateServiceCategory(category._id, {
-        name,
-        description,
-        image: finalImageUrl,
-      });
-
-      toast.success("Service category updated successfully! 🎉");
-
+  name,
+  description,
+  newImageFile, // pass the actual File object, not preview URL
+});
+      toast.success(`Service category "${updatedCategory.data.name}" updated successfully! 🎉`);
       onSave(updatedCategory);
       onCancel();
     } catch (err) {
       console.error(err);
-      toast.error(`Failed to update service: ${err.message}`);
+     const message = err.response?.data?.message || err.message || "Failed to update service ❌";
+    toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -92,7 +84,7 @@ const EditServiceCategoryForm = ({ category, onSave, onCancel }) => {
             placeholder="e.g., Electrical, Plumbing"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            required
+            // required
             className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
           />
         </div>

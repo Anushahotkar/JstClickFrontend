@@ -3,8 +3,8 @@ import { MdAddCircleOutline, MdCloudUpload } from "react-icons/md";
 import { VscSymbolNamespace } from "react-icons/vsc";
 import { toast } from "react-hot-toast";
 
-import { createProductCategory } from "../../api/categoryApi";
-import { createCategorySchema } from "../../validation/category.validation";
+import { createProductCategory, createCategorySchema  } from "../../api/categoryApi";
+
 
 const AddProductForm = ({ onClose, onProductAdded }) => {
   const [name, setName] = useState("");

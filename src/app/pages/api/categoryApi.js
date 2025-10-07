@@ -2,10 +2,11 @@ import axios from "axios";
 import Joi from "joi";
 import api from "./authApi";
 
+// const token = getToken();
+
 // src/api/categoryApi.jsx
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
 
 // Validation schema for product category ID
 const categoryIdSchema = Joi.string().hex().length(24).required();
@@ -13,6 +14,107 @@ const categoryIdSchema = Joi.string().hex().length(24).required();
 
 // Helper to get the token from localStorage
 const getToken = () => localStorage.getItem("authToken");
+
+
+
+  const token = getToken();
+  if (!token) throw new Error("Authentication token missing");
+
+
+
+// ObjectId validator for MongoDB
+export const objectIdSchema = Joi.string()
+  .length(24)
+  .hex()
+  .required()
+  .messages({
+    "string.length": "Invalid category ID",
+    "string.hex": "Invalid category ID",
+    "any.required": "Category ID is required",
+  });
+
+// ✅ New: Delete category schema
+export const deleteCategorySchema = Joi.object({
+  categoryId: objectIdSchema,
+  publicId: Joi.string().allow("").optional(), // Cloudinary public_id may be optional
+});
+
+// Category fields validation
+export const createCategorySchema = Joi.object({
+  name: Joi.string()
+    .min(2)
+    .max(50)
+    .required()
+    .messages({
+      "string.empty": "category name is required",
+      "string.min": "Name must be at least 2 characters",
+      "string.max": "Name cannot exceed 50 characters",
+    }),
+
+  description: Joi.string()
+    .allow("")
+    .max(300)
+    .messages({
+      "string.max": "Description cannot exceed 300 characters",
+    }),
+
+  image: Joi.any()
+    .required()
+    .messages({
+      "any.required": "At least one image is required",
+    }),
+});
+
+// Middleware to validate image
+export const validateCategoryImage = (req, res, next) => {
+  if (!req.file) {
+    return res.status(400).json({
+      success: false,
+      message: "Category image is required",
+    });
+  }
+
+  // Optional: check file type
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp","image/avif","image/jpg"];
+  if (!allowedTypes.includes(req.file.mimetype)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid image type. Allowed: jpeg, png, webp, avif, jpg",
+    });
+  }
+
+  next();
+};
+
+
+//  Combined validation middleware: category fields + image
+
+// export const editCategorySchema = createCategorySchema;
+
+export const serviceCategorySchema=createCategorySchema;
+
+
+// Edit category: image optional
+export const editCategorySchema = Joi.object({
+  name: Joi.string()
+    .min(2)
+    .max(50)
+    .optional()
+    .messages({
+      "string.min": "Name must be at least 2 characters",
+      "string.max": "Name cannot exceed 50 characters",
+    }),
+  description: Joi.string()
+    .allow("")
+    .max(300)
+    .optional()
+    .messages({
+      "string.max": "Description cannot exceed 300 characters",
+    }),
+  image: Joi.any().optional(), // ✅ image is optional
+});
+
+
 
 /**
  * Fetch all categories (services or products)
@@ -37,27 +139,21 @@ export const fetchCategoriesApi = async (type = "services") => {
 
 // ✅ Delete category (services or products)
 export const deleteCategoryApi = async (activeTab, categoryId) => {
-  const token = getToken();
-  if (!token) throw new Error("Authentication token missing");
 
+try{
   const endpoint =
     activeTab === "services"
-      ? `${API_BASE_URL}/admin/api/adminCategory/service-category/${categoryId}`
-      : `${API_BASE_URL}/admin/api/product-category/${categoryId}`;
+      ? `/admin/api/adminCategory/service-category/${categoryId}`
+      : `/admin/api/product-category/${categoryId}`;
 
-  const res = await fetch(endpoint, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || "Failed to delete category");
+   const res = await api.delete(endpoint);
+   
+  return res.data;}
+  catch(error){
+    console.log(error);
+     
   }
-
-  return true;
+  
 };
 
 // ✅ Create Product Category (supports multiple images)
@@ -66,26 +162,15 @@ export const createProductCategory = async (name, image) => {
     throw new Error("Category name and at least one image are required.");
   }
 
-  const token = getToken();
-  if (!token) throw new Error("No authentication token found. Please log in.");
-
   const formData = new FormData();
   formData.append("name", name);
   image.forEach((img) => formData.append("image", img));
 
-  const res = await fetch(`${API_BASE_URL}/admin/api/adminCategory/product-category`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
+  const res = await api.post(`/admin/api/adminCategory/product-category`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
   });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || "Failed to create category.");
-  }
-
-  const data = await res.json();
-  return data.data;
+  return res.data;
 };
 
 
@@ -95,28 +180,19 @@ export const createProductCategory = async (name, image) => {
 export const createServiceCategory = async (name, file) => {
   if (!name || !file) throw new Error("Category name and an image are required.");
 
-  const { url, public_id } = await uploadServiceCategoryImage(file);
+  const formData = new FormData();
+  formData.append("name", name);
+  formData.append("image", file); // <-- append image
 
-  const token = getToken();
-  if (!token) throw new Error("Authentication token missing");
+  const res = await api.post(
+    "/admin/api/adminCategory/category",
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } } // <-- important
+  );
 
-  const res = await fetch(`${API_BASE_URL}/admin/api/adminCategory/category`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ name, image: url, public_id }), // include public_id
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || "Failed to create service category.");
-  }
-
-  const data = await res.json();
-  return data.data;
+  return res.data; // make sure backend returns image URL
 };
+
 
 
 
@@ -124,71 +200,43 @@ export const createServiceCategory = async (name, file) => {
 
 // ✅ Update product category
 export const updateProductCategory = async (categoryId, formData) => {
-  const token = getToken();
-  if (!token) throw new Error("Authentication token missing");
 
-  const res = await fetch(`${API_BASE_URL}/admin/api/adminCategory/product-category/${categoryId}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`, // only auth header
-    },
-    body: formData,
-    credentials: "include",
-  });
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || "Failed to update category");
-  }
+    const res = await api.put(
+    `/admin/api/adminCategory/product-category/${categoryId}`,
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    }
+  );
 
-  const data = await res.json();
-  return data.data;
+
+  return res.data;
 };
 
 
 
-// ✅ Upload image to Cloudinary
-export const uploadImageToCloudinary = async (file, folder = "productCategories") => {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-  formData.append("folder", folder);
 
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-    method: "POST",
-    body: formData,
-  });
-
-  const data = await res.json();
-  if (!res.ok || !data.secure_url) throw new Error(data.error?.message || "Cloudinary upload failed");
-  return data.secure_url;
-};
 
 
 // Update service category (with optional image)
-export const updateServiceCategory = async (categoryId, payload, file) => {
-  const token = getToken();
-  if (!token) throw new Error("Authentication token missing");
+export const updateServiceCategory = async (categoryId, { name, description, newImageFile }) => {
+  const formData = new FormData();
+  if (name) formData.append("name", name);
+  if (description) formData.append("description", description);
+  if (newImageFile) formData.append("image", newImageFile);
 
-  if (file) {
-    const { url } = await uploadServiceCategoryImage(file); // only take URL
-    payload.image = url;
-  }
+  const res = await api.put(
+    `/admin/api/adminCategory/service-category/${categoryId}`,
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    }
+  );
 
-  const res = await fetch(`${API_BASE_URL}/admin/api/adminCategory/service-category/${categoryId}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || "Failed to update service category.");
-  }
-
-  const data = await res.json();
-  return data.data;
+  return res.data;
 };
+
 
 
 
@@ -204,8 +252,7 @@ export const deleteProductCategory = async (categoryId) => {
   if (error) {
     throw new Error(`Invalid category ID: ${error.message}`);
   }
-   const token = getToken();
-  if (!token) throw new Error("Authentication token missing");
+   
 
   try {
     
@@ -231,12 +278,10 @@ export const deleteProductCategory = async (categoryId) => {
  * @param {string} publicId
  * @returns {Promise<{ success: boolean, message: string }>} API response
  */
-export const deleteServiceCategory = async (categoryId, publicId) => {
+export const deleteServiceCategory = async (categoryId) => {
   const { error } = categoryIdSchema.validate(categoryId);
   if (error) throw new Error(`Invalid category ID: ${error.message}`);
 
-  const token = getToken();
-  if (!token) throw new Error("Authentication token missing");
 
   try {
     console.log("in API call");
@@ -247,14 +292,7 @@ export const deleteServiceCategory = async (categoryId, publicId) => {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    // Delete image from Cloudinary
-    if (publicId) {
-      await axios.post(
-        `${API_BASE_URL}/admin/api/adminCategory/delete-image`,
-        { public_id: publicId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-    }
+   
 
     // ✅ Return a message from API
     return {
@@ -272,25 +310,5 @@ export const deleteServiceCategory = async (categoryId, publicId) => {
 
 
 
-export const uploadServiceCategoryImage = async (file) => {
-  const formData = new FormData();
-  formData.append("file", file); // File object from input
-  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-  formData.append("folder", "serviceCategories");
-
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-    method: "POST",
-    body: formData // ✅ Must send as form-data
-  });
-
-  const data = await res.json();
-
-  if (!res.ok || !data.secure_url) {
-    throw new Error(data.error?.message || "Cloudinary upload failed");
-  }
-
-  // Return URL and public_id
-  return { url: data.secure_url, public_id: data.public_id };
-};
 
 

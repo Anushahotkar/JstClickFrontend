@@ -1,7 +1,4 @@
-/*AddServiceForm.jsx*/
-
 /* AddServiceForm.jsx */
-
 import { useState, useEffect } from "react";
 import { MdClose } from "react-icons/md";
 import {
@@ -11,22 +8,21 @@ import {
   FaTag,
   FaSave,
   FaInfoCircle,
-  FaCheckCircle,
+
   FaCloudUploadAlt,
+  FaSpinner,
 } from "react-icons/fa";
 import { useParams } from "react-router-dom";
-import { fetchCategories, createService } from "../../api/servicesApi";
-import { serviceSchema } from "../../validation/serviceValidation";
+import { fetchCategories, createService, serviceSchema } from "../../api/servicesApi";
 import { getCurrentUser } from "../../api/authApi";
 
-const AddServiceForm = ({ onClose, onServiceAdded }) => {
+const AddServiceForm = ({ onClose, onServiceAdded, showToast }) => {
   const { categoryId } = useParams();
   const [category, setCategory] = useState(null);
   const [formData, setFormData] = useState({ name: "", description: "", cost: "", image: null });
   const [preview, setPreview] = useState(null);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
 
   // Load logged-in user
@@ -41,7 +37,7 @@ const AddServiceForm = ({ onClose, onServiceAdded }) => {
       }
     };
     loadUser();
-  }, []);
+  }, [showToast]);
 
   // Fetch category
   useEffect(() => {
@@ -56,11 +52,6 @@ const AddServiceForm = ({ onClose, onServiceAdded }) => {
     };
     loadCategory();
   }, [categoryId]);
-
-  const showToast = (message, type) => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -77,24 +68,22 @@ const AddServiceForm = ({ onClose, onServiceAdded }) => {
     return () => preview && URL.revokeObjectURL(preview);
   }, [preview]);
 
-  
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!currentUser) return toast.error("User not authenticated");
+    if (!currentUser) return showToast("User not authenticated", "error");
 
-    // Validation
     const { error } = serviceSchema.validate(
       {
         name: formData.name,
         description: formData.description,
         cost: Number(formData.cost),
-        category: categoryId,
+        category: category?._id,
       },
       { abortEarly: false }
     );
 
-    if (error) {
-      error.details.forEach((d) => toast.error(d.message));
+    if (error?.details) {
+      error.details.forEach((d) => showToast(d.message, "error"));
       return;
     }
 
@@ -104,17 +93,17 @@ const AddServiceForm = ({ onClose, onServiceAdded }) => {
       form.append("name", formData.name);
       form.append("description", formData.description || "");
       form.append("cost", Number(formData.cost));
-      form.append("category", categoryId);
+      form.append("category", category?._id);
       if (formData.image) form.append("image", formData.image);
 
       const res = await createService(form);
       onServiceAdded(res.data || res.service);
 
-      toast.success("Service added successfully!");
+      showToast("Service added successfully!", "success");
       onClose();
     } catch (err) {
       console.error(err);
-      toast.error(err.message || "Failed to add service");
+      showToast(err.message || "Failed to add service", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -134,9 +123,6 @@ const AddServiceForm = ({ onClose, onServiceAdded }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          {/* User Loading */}
-          {!currentUser && <p className="text-yellow-600 text-sm mb-2">Loading user info...</p>}
-
           {/* Category */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 flex items-center gap-2">
@@ -230,25 +216,14 @@ const AddServiceForm = ({ onClose, onServiceAdded }) => {
             <button
               type="submit"
               disabled={isSubmitting || !currentUser || !category}
-              className="px-4 py-2 text-sm rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 flex items-center justify-center gap-2 w-full sm:w-auto"
+              className="px-4 py-2 text-sm sm:text-base rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-indigo-400 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
-              <FaSave /> {isSubmitting ? "Saving..." : "Save"}
+              {isSubmitting ? <FaSpinner className="animate-spin" /> : <FaSave />}
+              {isSubmitting ? "Saving..." : "Save"}
             </button>
           </div>
         </form>
       </div>
-
-      {/* Toast */}
-      {toast && (
-        <div
-          className={`fixed top-5 right-5 px-4 py-3 rounded shadow flex items-center gap-2 text-white transition-opacity ${
-            toast.type === "success" ? "bg-green-500" : "bg-red-500"
-          }`}
-        >
-          <FaCheckCircle />
-          {toast.message}
-        </div>
-      )}
     </div>
   );
 };
