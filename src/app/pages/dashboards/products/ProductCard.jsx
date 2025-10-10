@@ -1,7 +1,7 @@
 /* ProductCard.jsx - Styled like ServiceCard.jsx */
 
 import { Pencil, Trash2, MoreHorizontal } from "lucide-react";
-import { FaRupeeSign } from "react-icons/fa";
+import { FaRupeeSign,FaBoxOpen } from "react-icons/fa";
 
 const ProductCard = ({
   product,
@@ -11,10 +11,10 @@ const ProductCard = ({
   onDelete,
   onMoreOptionsClick,
 }) => {
-  const defaultImage = "https://via.placeholder.com/150";
+  // const defaultImage = "https://via.placeholder.com/150";
 
   const getImageSrc = (url) => {
-    if (!url) return defaultImage;
+     if (!url || url.trim() === "") return null; 
     if (url.startsWith("http")) return url;
     const cleanedUrl = url.replaceAll("\\", "/").replace(/^\/+/, "");
     return `${apiBaseUrl.replace(/\/$/, "")}/${cleanedUrl}`;
@@ -53,14 +53,27 @@ const ProductCard = ({
         </button>
       )}
 
-      {/* Image */}
-      <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-blue-400 mb-4 mx-auto">
-        <img
-          src={imgSrc}
-          alt={product.name}
-          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-        />
-      </div>
+ {/* Image / Icon */}
+   {/* Image / Icon */}
+<div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-2 border-blue-400 mb-4 mx-auto flex items-center justify-center bg-gray-100">
+  {imgSrc ? (
+    <img
+      src={imgSrc}
+      alt={product.name}
+      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+      onError={(e) => {
+        // Hide broken image and show icon
+        e.currentTarget.style.display = "none";
+        e.currentTarget.parentNode.querySelector('.fallback-icon').style.display = "block";
+      }}
+    />
+  ) : null}
+
+  {/* Fallback Icon */}
+  <FaBoxOpen className="fallback-icon text-4xl sm:text-5xl md:text-6xl text-blue-500" style={{ display: imgSrc ? "none" : "block" }} />
+</div>
+
+
 
       {/* Content */}
       <div className="flex flex-col flex-1 w-full items-center text-center">

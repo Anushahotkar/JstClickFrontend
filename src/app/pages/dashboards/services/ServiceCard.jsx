@@ -1,5 +1,5 @@
 import { Pencil, Trash2, MoreHorizontal } from "lucide-react";
-import { FaRupeeSign } from "react-icons/fa";
+import { FaRupeeSign, FaWrench  } from "react-icons/fa";
 
 const ServiceCard = ({
   service,
@@ -9,10 +9,10 @@ const ServiceCard = ({
   onDelete,
   onMoreOptionsClick,
 }) => {
-  const defaultImage = "https://via.placeholder.com/150";
+  // const defaultImage = "https://via.placeholder.com/150";
 
   const getImageSrc = (url) => {
-    if (!url) return defaultImage;
+    if (!url) return null;
     if (url.startsWith("http")) return url;
     const cleanedUrl = url.replaceAll("\\", "/").replace(/^\/+/, "");
     return `${apiBaseUrl.replace(/\/$/, "")}/${cleanedUrl}`;
@@ -46,12 +46,17 @@ const ServiceCard = ({
       )}
 
       {/* Image */}
-      <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-indigo-400 mb-4 mx-auto">
-        <img
-          src={imgSrc}
-          alt={service.name}
-          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-        />
+       {/* Image */}
+      <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden border-2 border-indigo-400 mb-4 mx-auto flex items-center justify-center bg-gray-100">
+        {imgSrc ? (
+          <img
+            src={imgSrc}
+            alt={service.name}
+            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+          />
+        ) : (
+          <FaWrench className="text-gray-400 text-3xl sm:text-4xl md:text-5xl" />
+        )}
       </div>
 
       {/* Content */}

@@ -8,22 +8,23 @@ import {
   FaTag,
   FaSave,
   FaInfoCircle,
-
   FaCloudUploadAlt,
   FaSpinner,
 } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import { fetchCategories, createService, serviceSchema } from "../../api/servicesApi";
 import { getCurrentUser } from "../../api/authApi";
+import toast from "react-hot-toast";
 
 const AddServiceForm = ({ onClose, onServiceAdded, showToast }) => {
   const { categoryId } = useParams();
   const [category, setCategory] = useState(null);
   const [formData, setFormData] = useState({ name: "", description: "", cost: "", image: null });
   const [preview, setPreview] = useState(null);
-  const [errors, setErrors] = useState({});
+  // const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+const [errors, setErrors] = useState({});
 
   // Load logged-in user
   useEffect(() => {
@@ -31,13 +32,13 @@ const AddServiceForm = ({ onClose, onServiceAdded, showToast }) => {
       try {
         const res = await getCurrentUser();
         if (res.success && res.data) setCurrentUser(res.data);
-        else showToast("Failed to fetch user", "error");
+        else toast.error("Failed to fetch user");
       } catch {
-        showToast("You are not authenticated", "error");
+          toast.error("You are not authenticated");
       }
     };
     loadUser();
-  }, [showToast]);
+  }, []);
 
   // Fetch category
   useEffect(() => {
@@ -47,7 +48,7 @@ const AddServiceForm = ({ onClose, onServiceAdded, showToast }) => {
         const found = res.data.find((c) => c._id === categoryId);
         setCategory(found);
       } catch {
-        setErrors((prev) => ({ ...prev, category: "Failed to load category" }));
+        toast.error("Failed to load category");
       }
     };
     loadCategory();
@@ -56,12 +57,15 @@ const AddServiceForm = ({ onClose, onServiceAdded, showToast }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: "" })); // clear error on change
   };
 
   const handleFileUpload = (e) => {
+    console.log(errors);
     const file = e.target.files[0];
     setFormData((prev) => ({ ...prev, image: file }));
     setPreview(file ? URL.createObjectURL(file) : null);
+    setErrors((prev) => ({ ...prev, image: "" })); // clear error
   };
 
   useEffect(() => {
@@ -70,22 +74,25 @@ const AddServiceForm = ({ onClose, onServiceAdded, showToast }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+      //  setErrors({}); // reset errors
     if (!currentUser) return showToast("User not authenticated", "error");
-
+    if (!category) return showToast("Category not selected", "error");
     const { error } = serviceSchema.validate(
       {
         name: formData.name,
         description: formData.description,
         cost: Number(formData.cost),
         category: category?._id,
+        image: formData.image,
+
       },
       { abortEarly: false }
     );
 
-    if (error?.details) {
-      error.details.forEach((d) => showToast(d.message, "error"));
-      return;
-    }
+  if (error?.details) {
+    error.details.forEach((d) => toast.error(d.message));
+    return;
+  }
 
     setIsSubmitting(true);
     try {
@@ -103,7 +110,13 @@ const AddServiceForm = ({ onClose, onServiceAdded, showToast }) => {
       onClose();
     } catch (err) {
       console.error(err);
-      showToast(err.message || "Failed to add service", "error");
+      // Backend validation errors
+     // Backend validation errors
+    if (err?.response?.data?.errors?.length) {
+      err.response.data.errors.forEach((e) => toast.error(e.message));
+    } else {
+      toast.error(err?.response?.data?.message || err.message || "Failed to add service");
+    }
     } finally {
       setIsSubmitting(false);
     }
@@ -134,7 +147,7 @@ const AddServiceForm = ({ onClose, onServiceAdded, showToast }) => {
               readOnly
               className="mt-1 block w-full rounded-lg bg-gray-100 p-2 text-gray-700 text-sm"
             />
-            {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
+            {/* {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>} */}
           </div>
 
           {/* Name */}
@@ -150,7 +163,7 @@ const AddServiceForm = ({ onClose, onServiceAdded, showToast }) => {
               placeholder="Enter service name"
               className="mt-1 block w-full rounded-lg border p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
             />
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+            {/* {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>} */}
           </div>
 
           {/* Description */}
@@ -166,7 +179,7 @@ const AddServiceForm = ({ onClose, onServiceAdded, showToast }) => {
               placeholder="Enter description"
               className="mt-1 block w-full rounded-lg border p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500 resize-none"
             />
-            {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+            {/* {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>} */}
           </div>
 
           {/* Cost */}
@@ -182,7 +195,7 @@ const AddServiceForm = ({ onClose, onServiceAdded, showToast }) => {
               placeholder="e.g., 250"
               className="mt-1 block w-full rounded-lg border p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
             />
-            {errors.cost && <p className="text-red-500 text-xs mt-1">{errors.cost}</p>}
+            {/* {errors.cost && <p className="text-red-500 text-xs mt-1">{errors.cost}</p>} */}
           </div>
 
           {/* Image */}
@@ -201,7 +214,7 @@ const AddServiceForm = ({ onClose, onServiceAdded, showToast }) => {
                 </div>
               )}
             </div>
-            {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>}
+            {/* {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>} */}
           </div>
 
           {/* Buttons */}

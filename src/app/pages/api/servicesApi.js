@@ -75,26 +75,22 @@ export const deleteService = async (serviceId) => {
 // Create a new service
 // Create a new service
 export const createService = async (serviceData) => {
-  try {
+
     const res = await api.post("/admin/api/services/services", serviceData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
-    return res.data;
-  } catch (err) {
-    throw new Error(err.response?.data?.message || `Failed to create service`);
-  }
+    return res.data.data;
+  
 };
 
 // Update an existing service
 export const updateService = async (serviceId, serviceData) => {
-  try {
+
     const res = await api.put(`/admin/services/${serviceId}`, serviceData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return res.data.data || res.data.service;
-  } catch (err) {
-    throw new Error(err.response?.data?.message || `Failed to update service`);
-  }
+  
 };
 
 // Fetch single category by ID

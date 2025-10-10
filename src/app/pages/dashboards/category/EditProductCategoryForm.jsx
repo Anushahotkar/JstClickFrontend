@@ -95,7 +95,7 @@ onCancel();
             placeholder="Category Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            required
+            // required
             className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-900 focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all"
           />
         </div>

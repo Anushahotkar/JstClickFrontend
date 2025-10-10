@@ -1,6 +1,6 @@
 /* ServiceProviders.jsx */
 import { useState, useEffect } from "react";
-import { FaStar, FaCheckCircle, FaTimesCircle, FaBan, FaStore, FaPaperPlane } from "react-icons/fa";
+import { FaCheckCircle, FaTimesCircle, FaBan, FaStore, FaPaperPlane } from "react-icons/fa";
 import { fetchServiceProviders, updateProviderAction, providerActionSchema } from "../../api/serviceProvidersApi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -24,14 +24,6 @@ const ServiceProviders = () => {
     };
     getProviders();
   }, []);
-
-  const getRatingStars = (rating) => (
-    <div className="flex items-center gap-1">
-      {[...Array(5)].map((_, i) => (
-        <FaStar key={i} className={i < Math.round(rating || 0) ? "text-yellow-400" : "text-gray-300"} />
-      ))}
-    </div>
-  );
 
   const getActionBgColor = (action) => {
     switch (action) {
@@ -99,7 +91,7 @@ const ServiceProviders = () => {
           <table className="min-w-full leading-normal">
             <thead>
               <tr className="bg-blue-100 text-blue-800 uppercase text-sm font-semibold">
-                {["Name", "Service Type", "Cost", "Rating", "Action", "Reason", "Submit"].map((col) => (
+                {["Name", "Service Type", "Cost", "Action", "Reason", "Submit"].map((col) => (
                   <th key={col} className="py-2 px-2 text-left whitespace-nowrap">{col}</th>
                 ))}
               </tr>
@@ -115,7 +107,6 @@ const ServiceProviders = () => {
                   </td>
                   <td className="py-2 px-2 max-w-[120px] break-words">{p.serviceType}</td>
                   <td className="py-2 px-2 font-semibold whitespace-nowrap">₹{p.cost}</td>
-                  <td className="py-2 px-2 whitespace-nowrap">{getRatingStars(p.ratings?.length ? p.ratings.reduce((a,b)=>a+b,0)/p.ratings.length : 0)}</td>
                   <td className="py-2 px-2">
                     <div className="flex items-center gap-2">
                       {getActionIcon(p.action)}
@@ -167,7 +158,6 @@ const ServiceProviders = () => {
               </div>
               <p className="text-sm sm:text-base text-gray-600">Service: {p.serviceType}</p>
               <p className="text-sm sm:text-base text-gray-600 font-semibold">Cost: ₹{p.cost}</p>
-              <div className="flex items-center gap-1 mt-1">{getRatingStars(p.ratings?.length ? p.ratings.reduce((a,b)=>a+b,0)/p.ratings.length : 0)}</div>
               <div className="mt-2 space-y-2">
                 <select
                   value={p.action}

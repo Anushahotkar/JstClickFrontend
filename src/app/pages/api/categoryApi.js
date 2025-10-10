@@ -41,12 +41,14 @@ export const deleteCategorySchema = Joi.object({
 
 // Category fields validation
 export const createCategorySchema = Joi.object({
-  name: Joi.string()
+    name: Joi.string()
+    .pattern(/^[A-Za-z\s]+$/) // ✅ allow only alphabets + spaces
     .min(2)
     .max(50)
     .required()
     .messages({
-      "string.empty": "category name is required",
+      "string.empty": "Category name is required",
+      "string.pattern.base": "Category name must contain only alphabets",
       "string.min": "Name must be at least 2 characters",
       "string.max": "Name cannot exceed 50 characters",
     }),
@@ -61,7 +63,7 @@ export const createCategorySchema = Joi.object({
   image: Joi.any()
     .required()
     .messages({
-      "any.required": "At least one image is required",
+      "any.required": "At least an image is required",
     }),
 });
 
@@ -97,10 +99,12 @@ export const serviceCategorySchema=createCategorySchema;
 // Edit category: image optional
 export const editCategorySchema = Joi.object({
   name: Joi.string()
+    .pattern(/^[A-Za-z\s]+$/) // ✅ allow only alphabets + spaces
     .min(2)
     .max(50)
     .optional()
     .messages({
+      "string.pattern.base": "Category name must contain only alphabets",
       "string.min": "Name must be at least 2 characters",
       "string.max": "Name cannot exceed 50 characters",
     }),
@@ -159,12 +163,12 @@ try{
 // ✅ Create Product Category (supports multiple images)
 export const createProductCategory = async (name, image) => {
   if (!name || !image || image.length === 0) {
-    throw new Error("Category name and at least one image are required.");
+    throw new Error("Category name and an image are required.");
   }
 
   const formData = new FormData();
   formData.append("name", name);
-  image.forEach((img) => formData.append("image", img));
+   formData.append("image", image); // single File
 
   const res = await api.post(`/admin/api/adminCategory/product-category`, formData, {
     headers: { "Content-Type": "multipart/form-data" },

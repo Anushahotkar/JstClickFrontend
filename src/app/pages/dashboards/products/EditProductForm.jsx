@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { MdClose } from "react-icons/md";
-import { FaRupeeSign,FaSpinner, FaPen, FaFileImage, FaTag, FaSave, FaInfoCircle } from "react-icons/fa";
+import { FaRupeeSign,FaCloud,FaSpinner, FaPen, FaFileImage, FaTag, FaSave, FaInfoCircle } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { fetchProductCategories, 
@@ -21,6 +21,7 @@ const EditProductForm = ({ productData, onClose, onProductUpdated }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileRef = useRef(null);
+  const [imageError, setImageError] = useState(false);
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
   useEffect(() => {
@@ -106,7 +107,11 @@ const { error } = editProductSchema.validate({
       onClose();
     } catch (err) {
       console.error(err);
-      toast.error(err.message || "Failed to update product");
+      if (err?.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+      err.response.data.errors.forEach((e) => toast.error(e.message));
+    } else {
+      toast.error(err?.response?.data?.message || "Failed to update product");
+    }
     } finally {
       setIsSubmitting(false);
     }
@@ -151,7 +156,7 @@ const { error } = editProductSchema.validate({
               onChange={handleChange}
               placeholder="Enter product name"
               className="mt-1 block w-full rounded-lg border border-gray-300 p-2 text-sm sm:text-base focus:ring-purple-500 focus:border-purple-500"
-              required
+              // required
             />
           </div>
 
@@ -184,29 +189,38 @@ const { error } = editProductSchema.validate({
               className="mt-1 block w-full rounded-lg border border-gray-300 p-2 text-sm sm:text-base focus:ring-purple-500 focus:border-purple-500"
               min="0"
               step="0.01"
-              required
+              // required
             />
           </div>
 
-          {/* Image */}
-          <div>
-            <label className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-700">
-              <FaFileImage className="text-purple-500" /> Product Image
-            </label>
-            <div className="mt-1 flex items-center gap-2 sm:gap-3 flex-wrap">
-              <label className="cursor-pointer bg-purple-50 text-purple-600 rounded-md px-2 sm:px-3 py-1 sm:py-1.5 text-sm sm:text-base font-medium hover:bg-purple-100 transition-colors flex items-center gap-2">
-                Upload
-                <input type="file" onChange={handleImageUpload} className="sr-only" accept="image/*" />
-              </label>
-              {formData.preview && (
-                <img
-                  src={getPreviewUrl(formData.preview)}
-                  alt="product preview"
-                  className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 object-cover rounded-md border border-gray-300"
-                />
-              )}
-            </div>
-          </div>
+       {/* Image */}
+<div>
+  <label className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-700">
+    <FaFileImage className="text-purple-500" /> Product Image
+  </label>
+  <div className="mt-1 flex items-center gap-2 sm:gap-3 flex-wrap">
+    <label className="cursor-pointer bg-purple-50 text-purple-600 rounded-md px-2 sm:px-3 py-1 sm:py-1.5 text-sm sm:text-base font-medium hover:bg-purple-100 transition-colors flex items-center gap-2">
+      Upload
+      <input type="file" onChange={handleImageUpload} className="sr-only" accept="image/*" />
+    </label>
+
+  {/* Preview or Cloud Icon */}
+    <div className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 flex items-center justify-center rounded-md border border-gray-300 bg-gray-100 overflow-hidden">
+      {formData.preview && !imageError ? (
+        <img
+          src={getPreviewUrl(formData.preview)}
+          alt="product preview"
+          className="h-full w-full object-cover"
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        <FaCloud className="text-gray-400 text-3xl sm:text-4xl md:text-5xl" />
+      )}
+    </div>
+
+  </div>
+</div>
+
 
           {/* Buttons */}
           <div className="pt-2 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">

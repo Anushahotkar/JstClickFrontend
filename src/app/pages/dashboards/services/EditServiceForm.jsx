@@ -1,11 +1,11 @@
 // EditServiceForm.jsx
 import { useState, useEffect, useRef } from "react";
 import { MdClose } from "react-icons/md";
-import { FaRupeeSign, FaPen, FaFileImage, FaTag, FaSave, FaInfoCircle } from "react-icons/fa";
+import { FaRupeeSign, FaCloud, FaPen, FaFileImage, FaTag, FaSave, FaInfoCircle } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import { fetchCategoryById, updateService,serviceSchema } from "../../api/servicesApi";
 // import { serviceSchema } from "../../validation/serviceValidation";
-import { toast } from "react-toastify";
+import toast  from "react-hot-toast";
 import "react-toastify/dist/ReactToastify.css";
 
 const EditServiceForm = ({ serviceData, onClose, onServiceUpdated }) => {
@@ -18,6 +18,7 @@ const EditServiceForm = ({ serviceData, onClose, onServiceUpdated }) => {
     image: null,
     preview: serviceData?.image || "",
   });
+  const [imageError, setImageError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileRef = useRef(null);
 
@@ -51,32 +52,36 @@ const EditServiceForm = ({ serviceData, onClose, onServiceUpdated }) => {
     }
   };
 
-  const getImageUrl = (img) => {
-    if (!img) return "";
-    return img.startsWith("http")
-      ? img
-      : `${import.meta.env.VITE_API_BASE_URL}${img}`;
-  };
+  // const getImageUrl = (img) => {
+  //   if (!img) return "";
+  //   return img.startsWith("http")
+  //     ? img
+  //     : `${import.meta.env.VITE_API_BASE_URL}${img}`;
+  // };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     // Validate using Joi
-    const { error: validationError } = serviceSchema.validate({
+    const { error } = serviceSchema.validate({
       name: formData.name,
       description: formData.description || "",
       cost: parseFloat(formData.cost),
       category: category?._id,
+      image: formData.image,
     });
 
-    if (validationError) {
-      validationError.details.forEach((err) => {
-        toast.error(err.message, { autoClose: 3000 });
-      });
-      setIsSubmitting(false);
-      return;
-    }
+   if (error) {
+  if (error.details && error.details.length > 0) {
+    error.details.forEach((err) => toast.error(err.message, { autoClose: 3000 }));
+  } else {
+    toast.error(error.message || "Validation error", { autoClose: 3000 });
+  }
+  setIsSubmitting(false);
+  return;
+}
+
 
     // Prepare form data
     const form = new FormData();
@@ -89,10 +94,16 @@ const EditServiceForm = ({ serviceData, onClose, onServiceUpdated }) => {
     try {
       const updatedService = await updateService(serviceData._id, form);
       onServiceUpdated(updatedService);
-      toast.success("Service updated successfully!", { autoClose: 2000 });
+   
       onClose();
     } catch (err) {
-      toast.error(err.message || "Failed to update service", { autoClose: 3000 });
+     // Handle backend validation errors
+      const backendErrors = err?.response?.data;
+      if (backendErrors?.errors && Array.isArray(backendErrors.errors)) {
+        backendErrors.errors.forEach((e) => toast.error(e.message, { autoClose: 3000 }));
+      } else {
+        toast.error(backendErrors?.message || "Failed to update service", { autoClose: 3000 });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -173,25 +184,34 @@ const EditServiceForm = ({ serviceData, onClose, onServiceUpdated }) => {
             />
           </div>
 
-          {/* Image */}
-          <div>
-            <label className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-700">
-              <FaFileImage className="text-indigo-500" /> Service Image
-            </label>
-            <div className="mt-1 flex items-center gap-3 flex-wrap">
-              <label className="cursor-pointer bg-indigo-50 text-indigo-600 rounded-md px-3 py-1.5 text-sm sm:text-base font-medium hover:bg-indigo-100 transition-colors flex items-center gap-2">
-                Upload
-                <input type="file" name="image" onChange={handleImageUpload} className="sr-only" />
-              </label>
-              {(formData.image || serviceData?.image) && (
-                <img
-                  src={formData.image ? URL.createObjectURL(formData.image) : getImageUrl(serviceData.image)}
-                  alt="service"
-                  className="h-20 w-20 object-cover rounded-md border border-gray-300"
-                />
-              )}
-            </div>
-          </div>
+  
+{/* Image */}
+<div>
+  <label className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-700">
+    <FaFileImage className="text-indigo-500" /> Service Image
+  </label>
+  <div className="mt-1 flex items-center gap-3 flex-wrap">
+    <label className="cursor-pointer bg-indigo-50 text-indigo-600 rounded-md px-3 py-1.5 text-sm sm:text-base font-medium hover:bg-indigo-100 transition-colors flex items-center gap-2">
+      Upload
+      <input type="file" name="image" onChange={handleImageUpload} className="sr-only" />
+    </label>
+
+    {/* Preview or Cloud Icon */}
+    <div className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 flex items-center justify-center rounded-md border border-gray-300 bg-gray-100 overflow-hidden">
+      {formData.preview && !imageError ? (
+        <img
+          src={formData.preview.startsWith("http") ? formData.preview : `${import.meta.env.VITE_API_BASE_URL}${formData.preview}`}
+          alt="service preview"
+          className="h-full w-full object-cover"
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        <FaCloud className="text-gray-400 text-3xl sm:text-4xl md:text-5xl" />
+      )}
+    </div>
+  </div>
+</div>
+
 
           {/* Buttons */}
           <div className="pt-2 flex flex-col sm:flex-row justify-end gap-3">

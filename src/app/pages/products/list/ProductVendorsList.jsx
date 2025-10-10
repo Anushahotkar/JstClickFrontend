@@ -1,7 +1,6 @@
 /* ProductVendorsList.jsx */
 import { useEffect, useState } from "react";
 import {
-  FaStar,
   FaRupeeSign,
   FaCheckCircle,
   FaBan,
@@ -43,7 +42,7 @@ const ProductVendorsList = () => {
       case "Block":
         return <FaBan className="text-red-600" />;
       default:
-        return null; // removed 3-dots icon
+        return null;
     }
   };
 
@@ -99,7 +98,6 @@ const ProductVendorsList = () => {
                 <th className="py-3 px-6 text-left">Vendor</th>
                 <th className="py-3 px-6 text-left">Product Type</th>
                 <th className="py-3 px-6 text-left">Cost</th>
-                <th className="py-3 px-6 text-left">Rating</th>
                 <th className="py-3 px-6 text-left">Action</th>
                 <th className="py-3 px-6 text-left">Reason</th>
               </tr>
@@ -117,20 +115,6 @@ const ProductVendorsList = () => {
                   <td className="py-3 px-6 font-semibold flex items-center text-green-700">
                     <FaRupeeSign className="text-xs mr-1" />
                     {vendor.cost}
-                  </td>
-                  <td className="py-3 px-6">
-                    <div className="flex text-yellow-400">
-                      {[...Array(5)].map((_, i) => (
-                        <FaStar
-                          key={i}
-                          className={
-                            i < Math.round(vendor.rating || 0)
-                              ? "text-yellow-400"
-                              : "text-gray-300"
-                          }
-                        />
-                      ))}
-                    </div>
                   </td>
                   <td className="py-3 px-6">
                     <div className="flex items-center gap-2">
@@ -175,19 +159,6 @@ const ProductVendorsList = () => {
                 <div className="flex items-center font-semibold text-green-700">
                   <FaRupeeSign className="text-xs mr-1" />
                   {vendor.cost}
-                </div>
-                <div className="font-semibold text-gray-700">Rating</div>
-                <div className="flex text-yellow-400">
-                  {[...Array(5)].map((_, i) => (
-                    <FaStar
-                      key={i}
-                      className={
-                        i < Math.round(vendor.rating || 0)
-                          ? "text-yellow-400"
-                          : "text-gray-300"
-                      }
-                    />
-                  ))}
                 </div>
                 <div className="font-semibold text-gray-700">Action</div>
                 <div className="flex items-center gap-2">

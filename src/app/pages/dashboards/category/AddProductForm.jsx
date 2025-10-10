@@ -12,13 +12,20 @@ const AddProductForm = ({ onClose, onProductAdded }) => {
   const [preview, setPreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImage(file);
-      setPreview(URL.createObjectURL(file));
+const handleFileChange = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/avif", "image/jpg"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Invalid image type. Allowed types: jpeg, jpg, png, webp, avif");
+      return;
     }
-  };
+
+    setImage(file);
+    setPreview(URL.createObjectURL(file));
+  }
+};
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,14 +33,15 @@ const AddProductForm = ({ onClose, onProductAdded }) => {
     // ✅ Validate input using Joi
     const { error } = createCategorySchema.validate({ name, image });
     if (error) {
+      console.log(error);
       toast.error(error.details[0].message);
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const result = await createProductCategory(name, [image]); // API expects array
-      toast.success(`Product category "${result.name}" added successfully! 🎉`);
+      const result = await createProductCategory(name, image); // API expects array
+      toast.success(`Product category "${result.data.name}" added successfully! 🎉`);
       onProductAdded(result);
       onClose();
     } catch (err) {

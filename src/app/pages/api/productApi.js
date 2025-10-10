@@ -8,7 +8,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 // ------------------------------
 // Joi validation schema for product
 // ------------------------------
-
+const token = localStorage.getItem("authToken");
 
 export const productSchema = Joi.object({
   name: Joi.string().min(2).max(100).required().messages({
@@ -27,9 +27,18 @@ export const productSchema = Joi.object({
   description: Joi.string().allow("").max(500).messages({
     "string.max": "Description should not exceed 500 characters",
   }),
-  image: Joi.string().uri().required().messages({
-    "any.required": "Product image is required",
-  }),
+  image: Joi.any()
+    .custom((value, helpers) => {
+      if (!value) return helpers.error("any.required");
+      if (value instanceof File) return value; // valid file
+      if (typeof value === "string" && /^https?:\/\/.+/.test(value)) return value; // valid URL
+      return helpers.error("any.invalid");
+    })
+    .required()
+    .messages({
+      "any.required": "Product image is required",
+      "any.invalid": "Invalid image. Must be a File or a valid URL",
+    }),
 });
 
 
@@ -65,6 +74,10 @@ image: Joi.alternatives()
 
 });
 
+// ------------------------------
+// Error Handler (centralized for toast-friendly messages)
+// ------------------------------
+
 
 
 // ------------------------------
@@ -73,7 +86,7 @@ image: Joi.alternatives()
 export const fetchProductsByCategory = async (categoryId) => {
   if (!categoryId) throw new Error("Category ID is required");
 
-  const token = localStorage.getItem("authToken");
+  
   const res = await axios.get(`${API_BASE_URL}/admin/api/products/products/${categoryId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -94,7 +107,7 @@ export const fetchProductsByCategory = async (categoryId) => {
 // Fetch all product categories
 // ------------------------------
 export const fetchProductCategories = async () => {
-  const token = localStorage.getItem("authToken");
+  
   const res = await axios.get(`${API_BASE_URL}/admin/api/category/product-categories`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -104,19 +117,14 @@ export const fetchProductCategories = async () => {
 // ------------------------------
 // Add a new product with Joi validation
 // ------------------------------
-export const addProduct = async (productData) => {
-  // Validate data
-  const { error } = productSchema.validate(productData, { abortEarly: false });
-  if (error) {
-    throw new Error(`Validation error: ${error.details.map((d) => d.message).join(", ")}`);
-  }
-
-  const token = localStorage.getItem("authToken");
-  const res = await axios.post(`${API_BASE_URL}/admin/api/products/products`, productData, {
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+export const addProduct = async (formData) => {
+  
+  const res = await axios.post(`${API_BASE_URL}/admin/api/products/products`, formData, {
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
   });
   return res.data.data;
 };
+
 
 // ------------------------------
 // Upload image to Cloudinary
@@ -125,7 +133,7 @@ export const addProduct = async (productData) => {
 
 // Edit product
 export const editProduct = async (productId, formData) => {
-  const token = localStorage.getItem("authToken");
+  
   const res = await axios.put(`${API_BASE_URL}/admin/products/${productId}`, formData, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -135,7 +143,7 @@ export const editProduct = async (productId, formData) => {
 
 // Delete product
 export const deleteProduct = async (productId) => {
-  const token = localStorage.getItem("authToken");
+
   const res = await axios.delete(`${API_BASE_URL}/admin/products/${productId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });

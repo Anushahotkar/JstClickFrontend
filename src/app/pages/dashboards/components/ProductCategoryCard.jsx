@@ -5,21 +5,22 @@ const ProductCategoryCard = ({
   description,
   skills,
   imageUrl,
+  defaultIcon,
   onClick,
   onEdit,
   onDelete,
   onMoreOptionsClick,
 }) => {
-  const defaultImage = "https://via.placeholder.com/150";
+  // const defaultImage = "https://via.placeholder.com/150";
 
-  const getImageSrc = (url) => {
-    if (!url) return defaultImage;
-    if (url.startsWith("http")) return url;
-    const cleanedUrl = url.replaceAll("\\", "/").replace(/^\/+/, "");
-    return `${import.meta.env.VITE_API_BASE_URL || ""}/${cleanedUrl}`;
-  };
+  // const getImageSrc = (url) => {
+  //   if (!url) return defaultIcon;
+  //   if (url.startsWith("http")) return url;
+  //   const cleanedUrl = url.replaceAll("\\", "/").replace(/^\/+/, "");
+  //   return `${import.meta.env.VITE_API_BASE_URL || ""}/${cleanedUrl}`;
+  // };
 
-  const mainImage = getImageSrc(imageUrl);
+  // const mainImage = getImageSrc(imageUrl);
 
   return (
     <div
@@ -42,13 +43,26 @@ const ProductCategoryCard = ({
         </button>
       )}
 
-      {/* Main Image */}
-      <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-2 border-blue-400 mb-4">
-        <img
-          src={mainImage}
-          alt={user}
-          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-        />
+     
+      {/* Main Image / Icon */}
+      <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 
+                      rounded-full overflow-hidden border-2 border-blue-400 mb-4
+                      flex items-center justify-center bg-white">
+        {imageUrl ? (
+          <img
+            src={
+              imageUrl.startsWith("http")
+                ? imageUrl
+                : `${import.meta.env.VITE_API_BASE_URL}/${imageUrl.replaceAll("\\", "/").replace(/^\/+/, "")}`
+            }
+            alt={user}
+            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+          />
+        ) : (
+          <div className="text-4xl sm:text-5xl md:text-6xl text-green-500 flex items-center justify-center">
+            {defaultIcon}
+          </div>
+        )}
       </div>
 
       {/* User */}

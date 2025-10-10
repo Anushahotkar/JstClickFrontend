@@ -4,22 +4,21 @@ import {
   FaRupeeSign,
   FaBox,
   FaFileImage,
-  FaTag,
+  FaTag, 
   FaSave,
   FaInfoCircle,
   FaPen,
   FaCloudUploadAlt,
+  FaSpinner,
 } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
-// Direct API imports
 import {
   fetchProductCategories,
   addProduct,
-  productSchema
+  productSchema,
 } from "../../api/productApi";
-
 
 const AddProductForm = ({ onClose, onProductAdded }) => {
   const { categoryId } = useParams();
@@ -28,12 +27,13 @@ const AddProductForm = ({ onClose, onProductAdded }) => {
     name: "",
     description: "",
     cost: "",
-    image: "",
+    image: null,
   });
-  // const [preview, setPreview] = useState("");
+  const [preview, setPreview] = useState(null);
+  // const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
 
+  // Load category
   useEffect(() => {
     const loadCategory = async () => {
       try {
@@ -53,49 +53,60 @@ const AddProductForm = ({ onClose, onProductAdded }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageUpload = async (e) => {
+  const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    setIsUploading(true);
-    try {
-
-      setFormData((prev) => ({ ...prev}));
-   
-      // toast.success("Image uploaded successfully");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to upload image");
-    } finally {
-      setIsUploading(false);
-    }
+    const previewUrl = URL.createObjectURL(file);
+    setPreview(previewUrl);
+    setFormData((prev) => ({ ...prev, image: file }));
   };
+
+  useEffect(() => {
+    return () => preview && URL.revokeObjectURL(preview);
+  }, [preview]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-
-    const body = {
-      ...formData,
-      cost: parseFloat(formData.cost),
-      category: categoryId,
-    };
-
-    const { error } = productSchema.validate(body, { abortEarly: false });
-    if (error) {
-      toast.error(error.details.map((d) => d.message).join(", "));
-      setIsSubmitting(false);
-      return;
-    }
+    // setErrors({});
 
     try {
-      const newProduct = await addProduct(body);
+      // Validate with Joi
+     const { error } = productSchema.validate(
+  { ...formData, cost: Number(formData.cost), category: categoryId },
+  { abortEarly: false }
+);
+
+      if (error) {
+        console.log(error);
+         error.details.forEach((d) => toast.error(d.message));
+        setIsSubmitting(false);
+        return;
+
+      }
+
+      // Prepare FormData
+      const form = new FormData();
+      form.append("name", formData.name);
+      form.append("description", formData.description || "");
+      form.append("cost", Number(formData.cost));
+      form.append("category", categoryId);
+      if (formData.image) form.append("image", formData.image);
+
+      const newProduct = await addProduct(form);
       onProductAdded(newProduct);
-      // toast.success("Product added successfully");
+
       onClose();
     } catch (err) {
       console.error(err);
-      toast.error(err.message || "Failed to add product");
+ if (err.response?.data?.errors?.length) {
+        err.response.data.errors.forEach((e) =>
+          toast.error(e.message || "Validation error")
+        );
+      } else {
+        toast.error(err.response?.data?.message || err.message || "Failed to add product");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -103,22 +114,17 @@ const AddProductForm = ({ onClose, onProductAdded }) => {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50 p-3 sm:p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md sm:max-w-lg md:max-w-2xl lg:max-w-3xl p-4 sm:p-6 shadow-lg overflow-hidden">
+      <div className="bg-white rounded-xl w-full max-w-md sm:max-w-lg md:max-w-2xl p-6 shadow-lg border border-gray-200">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-gray-200">
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <FaBox className="text-purple-600" /> Add Product
           </h2>
-          <button
-            onClick={onClose}
-            aria-label="Close form"
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <MdClose size={28} />
+          <button onClick={onClose} aria-label="Close form" className="text-gray-400 hover:text-gray-600">
+            <MdClose size={24} />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           {/* Category */}
           <div>
@@ -129,11 +135,12 @@ const AddProductForm = ({ onClose, onProductAdded }) => {
               type="text"
               value={category?.name || "Loading..."}
               readOnly
-              className="mt-1 block w-full rounded-lg bg-gray-100 p-2 text-gray-700 text-sm sm:text-base"
+              className="mt-1 block w-full rounded-lg bg-gray-100 p-2 text-gray-700 text-sm"
             />
+            {/* {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>} */}
           </div>
 
-          {/* Product Name */}
+          {/* Name */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 flex items-center gap-2">
               <FaTag className="text-purple-500" /> Product Name
@@ -144,9 +151,9 @@ const AddProductForm = ({ onClose, onProductAdded }) => {
               value={formData.name}
               onChange={handleChange}
               placeholder="Enter product name"
-              className="mt-1 block w-full rounded-lg border border-gray-300 p-2 text-sm sm:text-base focus:ring-purple-500 focus:border-purple-500"
-              required
+              className="mt-1 block w-full rounded-lg border p-2 text-sm focus:ring-purple-500 focus:border-purple-500"
             />
+            {/* {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>} */}
           </div>
 
           {/* Description */}
@@ -160,8 +167,9 @@ const AddProductForm = ({ onClose, onProductAdded }) => {
               value={formData.description}
               onChange={handleChange}
               placeholder="Enter product description"
-              className="mt-1 block w-full rounded-lg border border-gray-300 p-2 text-sm sm:text-base focus:ring-purple-500 focus:border-purple-500 resize-none"
+              className="mt-1 block w-full rounded-lg border p-2 text-sm focus:ring-purple-500 focus:border-purple-500 resize-none"
             />
+            {/* {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>} */}
           </div>
 
           {/* Cost */}
@@ -175,53 +183,48 @@ const AddProductForm = ({ onClose, onProductAdded }) => {
               value={formData.cost}
               onChange={handleChange}
               placeholder="e.g., 250"
-              className="mt-1 block w-full rounded-lg border border-gray-300 p-2 text-sm sm:text-base focus:ring-purple-500 focus:border-purple-500"
+              className="mt-1 block w-full rounded-lg border p-2 text-sm focus:ring-purple-500 focus:border-purple-500"
               min="0"
               step="0.01"
-              required
             />
+            {/* {errors.cost && <p className="text-red-500 text-xs mt-1">{errors.cost}</p>} */}
           </div>
 
-          {/* Image Upload */}
+          {/* Image */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 flex items-center gap-2">
               <FaFileImage className="text-purple-500" /> Product Image
             </label>
-            <div className="mt-1 flex items-center gap-2 flex-wrap">
-              <label className="cursor-pointer bg-purple-50 text-purple-600 rounded-md px-3 py-1.5 text-sm font-medium hover:bg-purple-100 transition-colors flex items-center gap-2">
-                <FaCloudUploadAlt /> {isUploading ? "Uploading..." : "Upload"}
-                <input
-                  type="file"
-                  onChange={handleImageUpload}
-                  accept="image/*"
-                  className="sr-only"
-                />
+            <div className="mt-2 flex items-center gap-3">
+              <label className="cursor-pointer bg-purple-50 text-purple-600 rounded-md px-4 py-2 text-sm font-medium hover:bg-purple-100 transition-colors flex items-center gap-2">
+                <FaCloudUploadAlt /> Upload
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="sr-only" />
               </label>
-              {/* {preview && (
-                <img
-                  src={preview}
-                  alt="Preview"
-                  className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-cover rounded-md border"
-                />
-              )} */}
+              {preview && (
+                <div className="relative w-12 h-12">
+                  <img src={preview} alt="Preview" className="w-full h-full object-cover rounded-md border" />
+                </div>
+              )}
             </div>
+            {/* {errors.image && <p className="text-red-500 text-xs mt-1">{errors.image}</p>} */}
           </div>
 
           {/* Buttons */}
-          <div className="pt-2 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+          <div className="pt-2 flex flex-col sm:flex-row justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300 w-full sm:w-auto"
+              className="px-3 py-2 text-sm rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300 w-full sm:w-auto"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || isUploading}
-              className="px-4 py-1.5 text-sm font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 flex items-center justify-center gap-2 w-full sm:w-auto"
+              disabled={isSubmitting}
+              className="px-4 py-2 text-sm sm:text-base rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:bg-purple-400 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
-              <FaSave /> {isSubmitting ? "Saving..." : "Save"}
+              {isSubmitting ? <FaSpinner className="animate-spin" /> : <FaSave />}
+              {isSubmitting ? "Saving..." : "Save"}
             </button>
           </div>
         </form>
