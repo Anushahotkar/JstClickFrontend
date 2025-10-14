@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Mail, Lock, Loader2 } from "lucide-react";
-import JSTcliqBlue from "assets/JSTcliqBlue.png";
+import JSTcliqBlue from "assets/JSTcliqBlue.jpeg";
 import { useAuthContext } from "app/contexts/auth/context";
 import { DASHBOARD_HOME_PATH } from "constants/app.constant.js";
 import { setSession } from "utils/jwt";
@@ -87,7 +87,7 @@ navigate(redirectTo, { replace: true });
         <img
           src={JSTcliqBlue}
           alt="JSTcliq Logo"
-          className="mx-auto w-40 sm:w-48 md:w-60 h-auto object-contain"
+          className="mx-auto w-60 sm:w-48 md:w-90 h-auto object-contain"
         />
       </div>
 

@@ -4,7 +4,8 @@ import { FaCheck, FaTimes, FaClock, FaExternalLinkAlt, FaUserPlus } from "react-
 import { Navigate } from "react-router-dom";
 import { fetchServiceOrders } from "../../api/serviceOrdersApi";
 import Spinner from "../../dashboards/components/Spinner";
-import AssignVendorsModal from "../AssignServiceVendors"; // import modal
+import AssignVendorsModal from "../AssignServiceVendors";
+import { toast } from "react-hot-toast";
 
 const isAuthenticated = () => !!localStorage.getItem("authToken");
 const ProtectedRoute = ({ children }) => (isAuthenticated() ? children : <Navigate to="/login" />);
@@ -12,8 +13,9 @@ const ProtectedRoute = ({ children }) => (isAuthenticated() ? children : <Naviga
 const ServiceOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState(null); // For modal
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [assigning, setAssigning] = useState(false);
 
   const token = localStorage.getItem("authToken");
 
@@ -24,7 +26,7 @@ const ServiceOrders = () => {
         setOrders(data);
       } catch (err) {
         console.error(err);
-        alert("Failed to load service orders");
+        toast.error("Failed to load service orders");
       } finally {
         setLoading(false);
       }
@@ -69,14 +71,36 @@ const ServiceOrders = () => {
   const formatDate = (date) => (date ? new Date(date).toLocaleDateString() : "-");
 
   const handleAssignClick = (order) => {
+    // Only allow assignment if status is "Upcoming"
+    if (order.status !== "Upcoming") return;
     setSelectedOrder(order);
     setIsModalOpen(true);
   };
 
-  const handleVendorAssign = (vendor) => {
-    console.log("Assigned vendor", vendor, "to order", selectedOrder);
-    setIsModalOpen(false);
+  const handleVendorAssign = async (vendor) => {
+    try {
+      setAssigning(true);
+      setIsModalOpen(false);
+      toast.success(`Vendor ${vendor.name || vendor.vendorName} assigned successfully!`);
+
+      // Refresh list after assigning
+      const updatedOrders = await fetchServiceOrders(token);
+      setOrders(updatedOrders);
+    } catch (err) {
+      console.error("Failed to refresh orders:", err);
+      toast.error("Failed to refresh service orders");
+    } finally {
+      setAssigning(false);
+    }
   };
+
+  const getVendorName = (vendorName) => {
+    if (!vendorName || vendorName.trim() === "") return "Not Assigned";
+    if (/admin/i.test(vendorName)) return "JstCliq";
+    return vendorName;
+  };
+
+  const isAssigned = (order) => order.status === "Ongoing"; // 🔹 assigned only when status changes to Ongoing
 
   if (loading)
     return (
@@ -87,7 +111,7 @@ const ServiceOrders = () => {
 
   return (
     <ProtectedRoute>
-      <div className="bg-gray-50 min-h-screen p-4 sm:p-8 font-sans">
+      <div className="bg-gray-50 min-h-screen p-4 sm:p-6 font-sans">
         <div className="max-w-7xl mx-auto bg-white rounded-2xl overflow-hidden shadow">
           {/* Header */}
           <div className="p-4 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -101,7 +125,7 @@ const ServiceOrders = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-100">
                 <tr>
-                  {["Service Name", "User Name", "Status", "Availed On", "Completed On", "Assign"].map((th) => (
+                  {["Service Name", "User Name", "Vendor Name", "Status", "Availed On", "Completed on", "Action"].map((th) => (
                     <th
                       key={th}
                       className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
@@ -116,6 +140,7 @@ const ServiceOrders = () => {
                   <tr key={idx} className="hover:bg-gray-50 transition text-sm">
                     <td className="px-4 py-4 font-medium text-gray-900">{order.serviceName}</td>
                     <td className="px-4 py-4 text-gray-600">{order.username}</td>
+                    <td className="px-4 py-4 text-gray-600">{getVendorName(order.vendorName)}</td>
                     <td className="px-4 py-4">
                       <span
                         className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusStyle(
@@ -130,10 +155,18 @@ const ServiceOrders = () => {
                     <td className="px-4 py-4 text-gray-600">{formatDate(order.completedOn)}</td>
                     <td className="px-4 py-4">
                       <button
+                        disabled={isAssigned(order) || assigning || order.status !== "Upcoming"}
                         onClick={() => handleAssignClick(order)}
-                        className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 shadow-sm transition"
+                        className={`flex items-center gap-2 px-3 py-2 rounded shadow-sm transition text-white ${
+                          isAssigned(order)
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : order.status === "Upcoming"
+                            ? "bg-green-600 hover:bg-green-700"
+                            : "bg-gray-300 cursor-not-allowed"
+                        }`}
                       >
-                        <FaUserPlus /> Assign
+                        <FaUserPlus />
+                        {isAssigned(order) ? "Assigned" : "Assign"}
                       </button>
                     </td>
                   </tr>
@@ -142,7 +175,7 @@ const ServiceOrders = () => {
             </table>
           </div>
 
-          {/* Mobile Card View */}
+          {/* Mobile Responsive Cards */}
           <div className="md:hidden p-4 space-y-4">
             {orders.map((order, idx) => (
               <div
@@ -161,14 +194,24 @@ const ServiceOrders = () => {
                   </span>
                 </div>
                 <div className="text-gray-500 text-sm">User: {order.username}</div>
+                <div className="text-gray-500 text-sm">Vendor: {getVendorName(order.vendorName)}</div>
                 <div className="text-gray-500 text-sm">Availed On: {formatDate(order.availedOn)}</div>
                 <div className="text-gray-500 text-sm">Completed On: {formatDate(order.completedOn)}</div>
+
                 <div className="mt-2">
                   <button
+                    disabled={isAssigned(order) || assigning || order.status !== "Upcoming"}
                     onClick={() => handleAssignClick(order)}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 shadow-sm transition"
+                    className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded shadow-sm transition text-white ${
+                      isAssigned(order)
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : order.status === "Upcoming"
+                        ? "bg-green-600 hover:bg-green-700"
+                        : "bg-gray-300 cursor-not-allowed"
+                    }`}
                   >
-                    <FaUserPlus /> Assign
+                    <FaUserPlus />
+                    {isAssigned(order) ? "Assigned" : "Assign"}
                   </button>
                 </div>
               </div>
@@ -181,6 +224,8 @@ const ServiceOrders = () => {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onAssign={handleVendorAssign}
+          serviceName={selectedOrder?.serviceName}
+          bookingId={selectedOrder?.bookingId}
         />
       </div>
     </ProtectedRoute>

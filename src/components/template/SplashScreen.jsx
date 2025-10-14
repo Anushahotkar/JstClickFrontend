@@ -1,5 +1,5 @@
 // Local Imports 
-import JSTcliqBlue from "assets/JSTcliqBlue.png"; // import your PNG
+import JSTcliqBlue from "assets/JSTcliqBlue.jpeg"; // import your PNG
 import { Progress } from "components/ui";
 
 // ----------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 import { useState, useEffect ,useCallback} from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiPlus } from "react-icons/fi";
+import { FiPlus,FiArrowLeft } from "react-icons/fi";
 
 import Modal from "../components/Modal";
 import AddServiceForm from "./AddServiceForm";
@@ -98,18 +98,35 @@ const loadServices = useCallback(async () => {
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen font-sans">
       {/* Header */}
-      <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-800 capitalize text-center sm:text-left">
-          {category?.name || "Category"}
-        </h1>
-        <button
-          onClick={() => setAddModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 sm:px-5 rounded-lg transition duration-300 w-full sm:w-auto justify-center"
-        >
-          <FiPlus size={18} />
-          <span className="text-sm sm:text-base">Add Service</span>
-        </button>
-      </header>
+      {/* Header */}
+<header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+  {/* Title */}
+  <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-800 capitalize text-center sm:text-left flex-1">
+    {category?.name || "Category"}
+  </h1>
+
+  {/* Buttons */}
+  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+    {/* Back Button */}
+    <button
+      onClick={() => navigate(-1)}
+      className="flex items-center gap-2 px-4 py-2.5 text-sm sm:text-base font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg shadow-sm transition w-full sm:w-auto justify-center"
+    >
+      <FiArrowLeft className="h-5 w-5" />
+      Back
+    </button>
+
+    {/* Add Service Button */}
+    <button
+      onClick={() => setAddModalOpen(true)}
+      className="flex items-center gap-2 px-4 py-2.5 text-sm sm:text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-md transition w-full sm:w-auto justify-center"
+    >
+      <FiPlus className="h-5 w-5" />
+      Add Service
+    </button>
+  </div>
+</header>
+
 
       {/* Services Grid */}
    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">

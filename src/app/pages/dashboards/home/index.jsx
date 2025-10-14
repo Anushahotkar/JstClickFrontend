@@ -14,8 +14,12 @@ import ServiceCard from "../services/ServiceCard";
 import ProductCard from "../products/ProductCard";
 import EditServiceCategoryForm from "../category/EditServiceCategoryForm";
 import EditProductCategoryForm from "../category/EditProductCategoryForm";
+import EditServiceForm from "../services/EditServiceForm";
+import EditProductForm from "../products/EditProductForm";
 import ServiceCategoryDeleteForm from "../category/ServiceCategoryDeleteForm";
 import ProductCategoryDeleteForm from "../category/ProductCategoryDeleteForm";
+import ServiceDeleteForm from "../services/ServiceDeleteForm";
+import ProductDeleteForm from "../products/ProductDeleteForm";
 import Spinner from "../components/Spinner";
 
 import { fetchCategoriesApi } from "../../api/categoryApi";
@@ -33,15 +37,24 @@ const Home = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editCategory, setEditCategory] = useState(null);
   const [deleteCategory, setDeleteCategory] = useState(null);
+  const [editItem, setEditItem] = useState(null);
+  const [deleteItem, setDeleteItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [categoriesMap, setCategoriesMap] = useState({}); // id -> category
+
 
   const navigate = useNavigate();
 
-  // Fetch categories with sub-items
   const fetchCategoriesWithSubItems = useCallback(async () => {
     setLoading(true);
     try {
       const cats = await fetchCategoriesApi(activeTab);
+      // Build map: categoryId -> category
+    const catMap = {};
+    cats.forEach(cat => {
+      catMap[cat._id] = cat;
+    });
+    setCategoriesMap(catMap);
       const catsWithSubItems = await Promise.all(
         cats.map(async (cat) => {
           const subItems =
@@ -67,11 +80,19 @@ const Home = () => {
   }, [activeTab, setSearchParams, fetchCategoriesWithSubItems]);
 
   const refreshCategories = async () => await fetchCategoriesWithSubItems();
-  const handleEdit = (cat) => {
+
+  const handleCategoryEdit = (cat) => {
     setEditCategory(cat);
     setIsModalOpen(true);
   };
-  const handleDelete = (cat) => setDeleteCategory(cat);
+  const handleCategoryDelete = (cat) => setDeleteCategory(cat);
+
+  const handleItemEdit = (item,parentCat) => {
+    setEditItem({ ...item, parentCategory: parentCat });
+    setIsModalOpen(true);
+  };
+  const handleItemDelete = (item) => setDeleteItem(item);
+
   const handleCategoryClick = (cat) =>
     navigate(
       activeTab === "services"
@@ -81,28 +102,33 @@ const Home = () => {
 
   const q = searchQuery.toLowerCase();
 
-  // Prepare display items based on search
   const displayItems = categories.reduce((acc, cat) => {
     const categoryMatch = cat.name.toLowerCase().includes(q);
     const filteredSubItems =
       cat.subItems?.filter((item) => item.name.toLowerCase().includes(q)) || [];
 
     if (searchQuery) {
-      // Show both category (if matches) and matching sub-items
       if (categoryMatch) acc.push({ type: "category", data: [cat] });
-      if (filteredSubItems.length > 0) acc.push({ type: "subItems", data: filteredSubItems, parent: cat });
+      if (filteredSubItems.length > 0)
+        acc.push({ type: "subItems", data: filteredSubItems, parent: cat });
     } else {
       acc.push({ type: "category", data: [cat] });
     }
-
     return acc;
   }, []);
 
   return (
     <div className="p-4 sm:p-6 md:p-10 min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-blue-100/60">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* Header with Back button */}
         <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
+          {/* <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-1 text-gray-600 hover:text-gray-800 mb-2 sm:mb-0"
+          >
+            <ArrowLeftIcon className="h-5 w-5" />
+            Back
+          </button> */}
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2">
             {activeTab === "services" ? (
               <WrenchScrewdriverIcon className="h-7 w-7 text-blue-600" />
@@ -122,6 +148,7 @@ const Home = () => {
             <button
               onClick={() => {
                 setEditCategory(null);
+                setEditItem(null);
                 setIsModalOpen(true);
               }}
               className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm sm:text-base font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-700 rounded-lg shadow-md hover:from-blue-600 hover:to-blue-800 transition-all"
@@ -181,8 +208,8 @@ const Home = () => {
                     defaultIcon={<MdMiscellaneousServices className="text-4xl text-blue-500" />}
                     description={cat.description || "Service Category"}
                     onClick={() => handleCategoryClick(cat)}
-                    onEdit={() => handleEdit(cat)}
-                    onDelete={() => handleDelete(cat)}
+                    onEdit={() => handleCategoryEdit(cat)}
+                    onDelete={() => handleCategoryDelete(cat)}
                   />
                 ) : (
                   <ProductCategoryCard
@@ -194,32 +221,40 @@ const Home = () => {
                     defaultIcon={<MdProductionQuantityLimits className="text-4xl text-green-500" />}
                     description={cat.description || "Product Category"}
                     onClick={() => handleCategoryClick(cat)}
-                    onEdit={() => handleEdit(cat)}
-                    onDelete={() => handleDelete(cat)}
+                    onEdit={() => handleCategoryEdit(cat)}
+                    onDelete={() => handleCategoryDelete(cat)}
                   />
                 );
               }
 
-              if (itemBlock.type === "subItems") {
-                const parentCat = itemBlock.parent;
-                return itemBlock.data.map((sub) =>
-                  activeTab === "services" ? (
-                    <ServiceCard
-                      key={sub._id}
-                      service={sub}
-                      apiBaseUrl={API_BASE_URL}
-                      onClick={() => navigate(`/dashboards/services/${parentCat._id}`)}
-                    />
-                  ) : (
-                    <ProductCard
-                      key={sub._id}
-                      product={sub}
-                      apiBaseUrl={API_BASE_URL}
-                      onClick={() => navigate(`/dashboards/products/${parentCat._id}`)}
-                    />
-                  )
-                );
-              }
+             if (itemBlock.type === "subItems") {
+  return itemBlock.data.map((sub) => {
+    const categoryName = categoriesMap[sub.categoryId]?.name || "Unknown Category"; // ✅ get category name by id
+
+    return activeTab === "services" ? (
+      <ServiceCard
+        key={sub._id}
+        service={sub}
+        apiBaseUrl={API_BASE_URL}
+        categoryName={categoryName}
+        onClick={() => navigate(`/dashboards/services/${sub.categoryId}`)}
+        onEdit={() => handleItemEdit(sub)}
+        onDelete={() => handleItemDelete(sub)}
+      />
+    ) : (
+      <ProductCard
+        key={sub._id}
+        product={sub}
+        apiBaseUrl={API_BASE_URL}
+        categoryName={categoryName}
+        onClick={() => navigate(`/dashboards/products/${sub.categoryId}`)}
+        onEdit={() => handleItemEdit(sub)}
+        onDelete={() => handleItemDelete(sub)}
+      />
+    );
+  });
+}
+
 
               return null;
             })}
@@ -229,18 +264,35 @@ const Home = () => {
 
       {/* Add/Edit Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        {/* Category Edit */}
         {editCategory ? (
           activeTab === "services" ? (
             <EditServiceCategoryForm
               category={editCategory}
+              parentCategory={editItem?.parentCategory} //
               onSave={refreshCategories}
               onCancel={() => setIsModalOpen(false)}
             />
           ) : (
             <EditProductCategoryForm
               category={editCategory}
+              parentCategory={editItem?.parentCategory} // ✅ pass parent category
               onSave={refreshCategories}
               onCancel={() => setIsModalOpen(false)}
+            />
+          )
+        ) : editItem ? (
+          activeTab === "services" ? (
+            <EditServiceForm
+              serviceData={editItem}
+              onClose={() => setIsModalOpen(false)}
+              onServiceUpdated={refreshCategories}
+            />
+          ) : (
+            <EditProductForm
+              productData={editItem}
+              onClose={() => setIsModalOpen(false)}
+              onProductUpdated={refreshCategories}
             />
           )
         ) : activeTab === "services" ? (
@@ -270,6 +322,29 @@ const Home = () => {
               setDeleteCategory(null);
               toast.success(`Product category "${deletedCat.name}" deleted ✅`);
               await refreshCategories();
+            }}
+          />
+        ))}
+
+      {deleteItem &&
+        (activeTab === "services" ? (
+          <ServiceDeleteForm
+            service={deleteItem}
+            onCancel={() => setDeleteItem(null)}
+            onDelete={async () => {
+              // call API to delete
+              await refreshCategories();
+              toast.success(`Service "${deleteItem.name}" deleted ✅`);
+            }}
+          />
+        ) : (
+          <ProductDeleteForm
+            product={deleteItem}
+            onCancel={() => setDeleteItem(null)}
+            onDelete={async () => {
+              // call API to delete
+              await refreshCategories();
+              toast.success(`Product "${deleteItem.name}" deleted ✅`);
             }}
           />
         ))}
