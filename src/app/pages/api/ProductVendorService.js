@@ -1,4 +1,8 @@
 // vendorService.js
+
+// productApi.js
+import Joi from "joi";
+import axios from "axios";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const getAuthHeaders = () => {
@@ -9,39 +13,39 @@ const getAuthHeaders = () => {
   };
 };
 
-export const fetchVendors = async () => {
-  try {
-    const res = await fetch(`${API_BASE_URL}/admin/productVendor/vendors`, {
-      headers: getAuthHeaders(),
-    });
+export const vendorActionSchema = Joi.object({
+  action: Joi.string()
+    .valid("Approved", "Disapproved", "Block", "Dropdown")
+    .required()
+    .messages({
+      "any.required": "Action is required",
+      "any.only": "Invalid action selected",
+    }),
+  reason: Joi.string()
+    .max(200)
+    
+    .required()
+    .messages({
+      "any.required": "Reason is required",
+      "string.max": "Reason must be at most 200 characters",
+    }),
+});
 
-    const data = await res.json();
-console.log(data);
-    if (!res.ok || !data.success) {
-      throw new Error(data.message || "Failed to fetch vendors");
-    }
-    console.log(data.data);
-    return data.data;
-  } catch (error) {
-    console.log(error);
-    console.error("❌ Error fetching vendors:", error);
-    throw error;
-  }
+export const fetchVendors = async () => {
+  const { data } = await axios.get(`${API_BASE_URL}/admin/productVendor/vendors`, {
+    headers: getAuthHeaders(),
+  });
+  if (!data.success) throw new Error(data.message || "Failed to fetch vendors");
+  return data.data;
 };
 
-export const updateVendorAction = async (id, action) => {
-  try {
-    const res = await fetch(`${API_BASE_URL}/admin/api/serviceProvider/${id}/action`, {
-      method: "PUT",
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ action }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Failed to update vendor action");
-    return data;
-  } catch (error) {
-    console.error("❌ Error updating vendor action:", error);
-    throw error;
-  }
+export const updateVendorAction = async (id, action, reason) => {
+  const payload = { action, reason };
+  const { data } = await axios.post(
+    `${API_BASE_URL}/admin/productVendor/action/${id}`,
+    payload,
+    { headers: getAuthHeaders() }
+  );
+  if (!data.success) throw new Error(data.message || "Failed to update vendor action");
+  return data;
 };

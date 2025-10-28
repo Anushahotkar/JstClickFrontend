@@ -313,6 +313,22 @@ export const deleteServiceCategory = async (categoryId) => {
 
 
 
+/**
+ * Fetch a single service category by ID
+ * @param {string} categoryId
+ * @returns {Promise<Object>} category data
+ */
+export const fetchServiceCategoryById = async (categoryId) => {
+  const { error } = objectIdSchema.validate(categoryId);
+  if (error) throw new Error(`Invalid category ID: ${error.message}`);
 
+  try {
+    const res = await api.get(`/admin/api/services/service-category/${categoryId}`);
+    return res.data.data; // Assuming backend returns { data: { ...category } }
+  } catch (err) {
+    const message = err.response?.data?.message || err.message;
+    throw new Error(message);
+  }
+};
 
 

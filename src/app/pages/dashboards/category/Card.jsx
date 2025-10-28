@@ -32,7 +32,7 @@ const Card = ({ user, role, imageUrl, onClick }) => {
 
       {/* Title + Description */}
       <h2 className="text-lg font-bold text-gray-800 mb-1">{user}</h2>
-      {role && <p className="text-sm text-gray-500">{role}</p>}
+      {role && <p className="text-sm  text-gray-500">{role}</p>}
 
       {/* More options */}
       <button className="absolute top-4 right-4 p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">

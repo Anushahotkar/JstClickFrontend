@@ -88,7 +88,7 @@ const Home = () => {
   const handleCategoryDelete = (cat) => setDeleteCategory(cat);
 
   const handleItemEdit = (item,parentCat) => {
-    setEditItem({ ...item, parentCategory: parentCat });
+    setEditItem({ ...item, parentCategory: parentCat ,categoryId: parentCat?._id || item.categoryId });
     setIsModalOpen(true);
   };
   const handleItemDelete = (item) => setDeleteItem(item);
@@ -196,8 +196,11 @@ const Home = () => {
               if (itemBlock.type === "category") {
                 const cat = itemBlock.data[0];
                 const imageUrl = cat.image?.startsWith("http")
-                  ? cat.image
-                  : `${API_BASE_URL}/${cat.image.replace(/^\/+/, "").replaceAll("\\", "/")}`;
+  ? cat.image
+  : cat.image
+    ? `${API_BASE_URL}/${cat.image.replace(/^\/+/, "").replaceAll("\\", "/")}`
+    : null; // fallback
+
                 return activeTab === "services" ? (
                   <ServiceCategoryCard
                     key={cat._id}
@@ -229,7 +232,11 @@ const Home = () => {
 
              if (itemBlock.type === "subItems") {
   return itemBlock.data.map((sub) => {
-    const categoryName = categoriesMap[sub.categoryId]?.name || "Unknown Category"; // ✅ get category name by id
+   const categoryName =
+  activeTab === "services"
+    ? categoriesMap[sub.categoryId]?.name || "Unknown Category"
+    : sub.category?.name || "Unknown Category";
+
 
     return activeTab === "services" ? (
       <ServiceCard
@@ -248,7 +255,7 @@ const Home = () => {
         apiBaseUrl={API_BASE_URL}
         categoryName={categoryName}
         onClick={() => navigate(`/dashboards/products/${sub.categoryId}`)}
-        onEdit={() => handleItemEdit(sub)}
+        onEdit={() => handleItemEdit(sub, itemBlock.parent)}
         onDelete={() => handleItemDelete(sub)}
       />
     );
@@ -285,12 +292,14 @@ const Home = () => {
           activeTab === "services" ? (
             <EditServiceForm
               serviceData={editItem}
+               categoryId={editItem.parentCategory?._id || editItem.categoryId} // pass categoryId explicitly
               onClose={() => setIsModalOpen(false)}
               onServiceUpdated={refreshCategories}
             />
           ) : (
             <EditProductForm
               productData={editItem}
+              categoryId={editItem.parentCategory?._id || editItem.categoryId}
               onClose={() => setIsModalOpen(false)}
               onProductUpdated={refreshCategories}
             />

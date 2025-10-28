@@ -15,6 +15,9 @@ export const serviceSchema = Joi.object({
   category: Joi.string().required().messages({
     "string.empty": `"category" is required`,
   }),
+   wageType: Joi.string().required().messages({
+    "string.empty": `"wageType" is required`,
+  }),
  user: Joi.string().optional(),
 userType: Joi.string().optional(),
 
@@ -96,10 +99,15 @@ export const updateService = async (serviceId, serviceData) => {
 // Fetch single category by ID
 // servicesApi.js
 
-export const fetchCategoryById = async (categoryId) => {
-  const res = await fetchCategories(); // returns full API response
-  const categories = res.data || [];   // extract the array from `data`
-  const category = categories.find((c) => c._id === categoryId);
-  if (!category) throw new Error("Category not found");
-  return category;
+
+
+// Fetch a single service by ID
+export const fetchServiceById = async (serviceId) => {
+  try {
+    const res = await api.get(`/admin/api/services/service/${serviceId}`);
+    return res.data.data; // assuming backend returns { data: { ...service } }
+  } catch (err) {
+    throw new Error(err.response?.data?.message || "Service not found");
+  }
 };
+

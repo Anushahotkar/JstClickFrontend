@@ -78,17 +78,31 @@ const ProductCard = ({
       {/* Content */}
       <div className="flex flex-col flex-1 w-full items-center text-center">
         {/* Name */}
-        <h2 className="text-sm sm:text-base md:text-lg font-bold text-gray-800 break-words line-clamp-2 mb-1">
+        <h2 className="text-sm sm:text-base md:text-lg font-bold text-gray-800 break-words justify-text text-center mb-1">
           {product.name}
         </h2>
 
         {/* Description */}
-        <p className="text-xs sm:text-sm md:text-base text-gray-600 break-words line-clamp-3 mb-3">
+        <p className="text-xs sm:text-sm justify-text md:text-base text-gray-600 break-words text-center mb-3">
           {description}
         </p>
 
         {/* Cost & Actions pushed to bottom */}
         <div className="mt-auto w-full">
+
+          {/* Unit & Quantity/Weight/Volume */}
+<div className="flex items-center justify-center gap-2 text-gray-700 text-xs sm:text-sm md:text-base w-full max-w-[160px] mx-auto mb-3 px-2 py-1 rounded-full bg-gray-100">
+  {product?.unit === "quantity" && (
+    <span>Qty: {product?.quantity ?? 0}</span>
+  )}
+  {product?.unit === "kg" && (
+    <span>Weight: {product?.weight ?? 0} kg</span>
+  )}
+  {product?.unit === "liters" && (
+    <span>Volume: {product?.volume ?? 0} L</span>
+  )}
+</div>
+
           {/* Cost */}
           <div className="flex items-center justify-center gap-1 text-gray-800 font-semibold px-3 py-1 rounded-full text-sm sm:text-base w-full max-w-[140px] mx-auto mb-3">
             <FaRupeeSign className="text-green-600" />

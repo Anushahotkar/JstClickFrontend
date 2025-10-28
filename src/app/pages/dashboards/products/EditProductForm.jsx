@@ -1,74 +1,87 @@
 import { useState, useEffect, useRef } from "react";
 import { MdClose } from "react-icons/md";
-import { FaRupeeSign,FaCloud,FaSpinner, FaPen, FaFileImage, FaTag, FaSave, FaInfoCircle } from "react-icons/fa";
-import { useParams } from "react-router-dom";
+import {
+  FaRupeeSign,
+  FaCloud,
+  FaSpinner,
+  FaPen,
+  FaFileImage,
+  FaTag,
+  FaSave,
+  FaInfoCircle,
+   FaBalanceScale,
+  FaFlask,
+  FaHashtag,
+} from "react-icons/fa";
 import toast from "react-hot-toast";
-import { fetchProductCategories, 
-  editProduct, 
-  editProductSchema } from "../../api/productApi";
-
+import {
+  fetchProductCategory,
+  editProduct,
+  editProductSchema,
+} from "../../api/productApi";
 
 const EditProductForm = ({ productData, onClose, onProductUpdated }) => {
-  const { categoryId } = useParams();
   const [category, setCategory] = useState(null);
   const [formData, setFormData] = useState({
     name: productData?.name || "",
     description: productData?.description || "",
     cost: productData?.cost || "",
+    unit: productData?.unit || "quantity",
+    quantity: productData?.quantity || "",
+    weight: productData?.weight || "",
+    volume: productData?.volume || "",
     image: null,
     preview: productData?.image || "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const fileRef = useRef(null);
   const [imageError, setImageError] = useState(false);
+  const fileRef = useRef(null);
+
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
+  // Fetch product category name using API
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchCategory = async () => {
       try {
-        const data = await fetchProductCategories();
-        const cat = data.find((c) => c._id === categoryId);
-        setCategory(cat || null);
+        const categoryName = await fetchProductCategory(productData._id);
+        setCategory({_id: categoryName.id,  name: categoryName.name });
       } catch (err) {
         console.error(err);
-        toast.error("Failed to fetch categories");
+        toast.error("Failed to fetch product category");
       }
     };
-    fetchCategories();
-  }, [categoryId]);
+    fetchCategory();
+  }, [productData._id]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageUpload = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  setIsUploading(true);
-  fileRef.current = file;
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-    try {
-
-     setFormData((prev) => ({
-    ...prev,
-    image: file,
-    preview: URL.createObjectURL(file), // <-- this shows the new preview
-  }));
-    } catch (err) {
-      console.error(err);
-      toast.error(err.message || "Image upload failed");
-    } finally {
-      setIsUploading(false);
-    }
+    setIsUploading(true);
+    fileRef.current = file;
+    setImageError(false); // reset error
+    setFormData((prev) => ({
+      ...prev,
+      image: file,
+      preview: URL.createObjectURL(file),
+    }));
+    setIsUploading(false);
   };
 
-  const getPreviewUrl = (preview) => {
+const getPreviewUrl = (preview) => {
   if (!preview) return "";
-  if (preview.startsWith("blob:")) return preview; // ✅ keep blob URLs as is
-  if (preview.startsWith("http")) return preview; // full URL from backend
-  return API_BASE_URL + preview; // relative path from backend
+  // Blob from upload
+  if (preview.startsWith("blob:")) return preview;
+  // Absolute URL
+  if (preview.startsWith("http")) return preview;
+  // Relative path from API
+  return `${API_BASE_URL}${preview.startsWith("/") ? "" : "/"}${preview}`;
 };
 
 
@@ -76,18 +89,14 @@ const EditProductForm = ({ productData, onClose, onProductUpdated }) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-// Determine the value to validate for image
-const imageToValidate = fileRef.current ? fileRef.current : formData.preview;
+    const imageToValidate = fileRef.current ? fileRef.current : formData.preview;
 
-const { error } = editProductSchema.validate({
-  ...formData,
-  category: category?._id,
-  image: imageToValidate, // ✅ File or URL
-}, { abortEarly: false, stripUnknown: true });
-
+    const { error } = editProductSchema.validate(
+      { ...formData, category: category?._id, image: imageToValidate },
+      { abortEarly: false, stripUnknown: true }
+    );
 
     if (error) {
-      console.log(error);
       toast.error(error.details[0].message);
       setIsSubmitting(false);
       return;
@@ -98,39 +107,47 @@ const { error } = editProductSchema.validate({
       form.append("name", formData.name);
       form.append("description", formData.description || "");
       form.append("cost", parseFloat(formData.cost));
-      form.append("category", category._id);
+       form.append("unit", formData.unit);
+   // Only append the relevant field based on unit
+    if (formData.unit === "quantity") form.append("quantity", formData.quantity || 0);
+    if (formData.unit === "kg") form.append("weight", formData.weight || 0);
+    if (formData.unit === "liters") form.append("volume", formData.volume || 0);
+      if (category?._id) form.append("category", category._id);
       if (fileRef.current) form.append("image", fileRef.current);
 
       const updated = await editProduct(productData._id, form);
       onProductUpdated(updated);
-
       onClose();
     } catch (err) {
       console.error(err);
-      if (err?.response?.data?.errors && Array.isArray(err.response.data.errors)) {
-      err.response.data.errors.forEach((e) => toast.error(e.message));
-    } else {
-      toast.error(err?.response?.data?.message || "Failed to update product");
-    }
+      if (err?.response?.data?.errors) {
+        err.response.data.errors.forEach((e) => toast.error(e.message));
+      } else {
+        toast.error(err?.response?.data?.message || "Failed to update product");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-2xl w-full max-w-[95%] sm:max-w-md md:max-w-lg p-3 sm:p-4 shadow-lg border border-gray-200 transition-all">
+   <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50 p-2 sm:p-4">
+      <div
+        className="bg-white rounded-2xl w-full max-w-[95%] sm:max-w-md md:max-w-lg 
+                   p-4 shadow-lg border border-gray-200 transition-all 
+                   max-h-[90vh] overflow-y-auto scrollbar-hide"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <FaPen className="text-purple-600" /> Edit Product
+         <div className="flex items-center justify-between mb-4 flex-shrink-0">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <FaPen className="text-indigo-600" /> Edit Product
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <MdClose size={26} />
+            <MdClose size={28} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Category */}
           <div>
             <label className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-700">
@@ -156,7 +173,6 @@ const { error } = editProductSchema.validate({
               onChange={handleChange}
               placeholder="Enter product name"
               className="mt-1 block w-full rounded-lg border border-gray-300 p-2 text-sm sm:text-base focus:ring-purple-500 focus:border-purple-500"
-              // required
             />
           </div>
 
@@ -189,38 +205,103 @@ const { error } = editProductSchema.validate({
               className="mt-1 block w-full rounded-lg border border-gray-300 p-2 text-sm sm:text-base focus:ring-purple-500 focus:border-purple-500"
               min="0"
               step="0.01"
-              // required
             />
           </div>
 
-       {/* Image */}
-<div>
-  <label className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-700">
-    <FaFileImage className="text-purple-500" /> Product Image
-  </label>
-  <div className="mt-1 flex items-center gap-2 sm:gap-3 flex-wrap">
-    <label className="cursor-pointer bg-purple-50 text-purple-600 rounded-md px-2 sm:px-3 py-1 sm:py-1.5 text-sm sm:text-base font-medium hover:bg-purple-100 transition-colors flex items-center gap-2">
-      Upload
-      <input type="file" onChange={handleImageUpload} className="sr-only" accept="image/*" />
-    </label>
+          {/* Unit, Quantity/Weight/Volume */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <FaBalanceScale className="text-purple-500" /> Unit
+              </label>
+              <select
+                name="unit"
+                value={formData.unit}
+                onChange={handleChange}
+                className="mt-1 w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-purple-500 focus:border-purple-500"
+              >
+                <option value="quantity">Quantity</option>
+                <option value="kg">Weight (kg)</option>
+                <option value="liters">Volume (L)</option>
+              </select>
+            </div>
 
-  {/* Preview or Cloud Icon */}
-    <div className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 flex items-center justify-center rounded-md border border-gray-300 bg-gray-100 overflow-hidden">
-      {formData.preview && !imageError ? (
-        <img
-          src={getPreviewUrl(formData.preview)}
-          alt="product preview"
-          className="h-full w-full object-cover"
-          onError={() => setImageError(true)}
-        />
-      ) : (
-        <FaCloud className="text-gray-400 text-3xl sm:text-4xl md:text-5xl" />
-      )}
-    </div>
+            {formData.unit === "quantity" && (
+              <div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <FaHashtag className="text-purple-500" /> Quantity
+                </label>
+                <input
+                  type="number"
+                  name="quantity"
+                  value={formData.quantity}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-lg border border-gray-300 p-2 text-sm focus:ring-purple-500 focus:border-purple-500"
+                />
+              </div>
+            )}
 
-  </div>
-</div>
+            {formData.unit === "kg" && (
+              <div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <FaBalanceScale className="text-purple-500" /> Weight (kg)
+                </label>
+                <input
+                  type="number"
+                  name="weight"
+                  value={formData.weight}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-lg border border-gray-300 p-2 text-sm focus:ring-purple-500 focus:border-purple-500"
+                />
+              </div>
+            )}
 
+            {formData.unit === "liters" && (
+              <div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <FaFlask className="text-purple-500" /> Volume (L)
+                </label>
+                <input
+                  type="number"
+                  name="volume"
+                  value={formData.volume}
+                  onChange={handleChange}
+                  className="mt-1 block w-full rounded-lg border border-gray-300 p-2 text-sm focus:ring-purple-500 focus:border-purple-500"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Image Upload */}
+          <div>
+            <label className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-700">
+              <FaFileImage className="text-purple-500" /> Product Image
+            </label>
+            <div className="mt-1 flex items-center gap-2 sm:gap-3 flex-wrap">
+              <label className="cursor-pointer bg-purple-50 text-purple-600 rounded-md px-2 sm:px-3 py-1 sm:py-1.5 text-sm sm:text-base font-medium hover:bg-purple-100 transition-colors flex items-center gap-2">
+                Upload
+                <input
+                  type="file"
+                  onChange={handleImageUpload}
+                  className="sr-only"
+                  accept="image/*"
+                />
+              </label>
+
+              <div className="h-20 w-20 sm:h-24 sm:w-24 md:h-28 md:w-28 flex items-center justify-center rounded-md border border-gray-300 bg-gray-100 overflow-hidden">
+                {formData.preview && !imageError ? (
+                  <img
+                    src={getPreviewUrl(formData.preview)}
+                    alt="product preview"
+                    className="h-full w-full object-cover"
+                    onError={() => setImageError(true)}
+                  />
+                ) : (
+                  <FaCloud className="text-gray-400 text-3xl sm:text-4xl md:text-5xl" />
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* Buttons */}
           <div className="pt-2 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
@@ -231,7 +312,7 @@ const { error } = editProductSchema.validate({
             >
               Cancel
             </button>
-             <button
+            <button
               type="submit"
               disabled={isSubmitting || isUploading}
               className="w-full sm:w-auto px-3 sm:px-4 py-2 text-sm sm:text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 flex items-center justify-center gap-2"

@@ -29,7 +29,7 @@
     "clsx": "^2.1.1",
     "color": "^5.0.0",
     "cors": "^2.8.5",
-    "dayjs": "^1.11.13",
+    "dayjs": "^1.11.18",
     "eslint-config-prettier": "^10.1.8",
     "eslint-define-config": "^2.1.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",

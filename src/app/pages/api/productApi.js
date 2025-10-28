@@ -24,6 +24,39 @@ export const productSchema = Joi.object({
     "number.min": "Cost must be greater than or equal to 0",
     "any.required": "Cost is required",
   }),
+  // ✅ Dynamic fields
+  unit: Joi.string().valid("quantity", "kg", "liters").required().messages({
+    "any.required": "Unit is required",
+    "any.only": "Unit must be one of: quantity, kg, or liters",
+  }),
+  quantity: Joi.when("unit", {
+    is: "quantity",
+    then: Joi.number().min(1).required().messages({
+      "any.required": "Quantity is required when unit is 'quantity'",
+      "number.base": "Quantity must be a number",
+      "number.min": "Quantity must be at least 1",
+    }),
+    // otherwise: Joi.forbidden(),
+  }),
+   weight: Joi.when("unit", {
+    is: "kg",
+    then: Joi.number().min(0.1).required().messages({
+      "any.required": "Weight is required when unit is 'kg'",
+      "number.base": "Weight must be a number",
+      "number.min": "Weight must be at least 0.1 kg",
+    }),
+    // otherwise: Joi.forbidden(),
+  }),
+  volume: Joi.when("unit", {
+    is: "liters",
+    then: Joi.number().min(0.1).required().messages({
+      "any.required": "Volume is required when unit is 'liters'",
+      "number.base": "Volume must be a number",
+      "number.min": "Volume must be at least 0.1 L",
+    }),
+    // otherwise: Joi.forbidden(),
+  }),
+
   description: Joi.string().allow("").max(500).messages({
     "string.max": "Description should not exceed 500 characters",
   }),
@@ -55,6 +88,40 @@ export const editProductSchema = Joi.object({
     "number.base": "Cost must be a number",
     "number.min": "Cost must be greater than or equal to 0",
     "any.required": "Cost is required",
+  }),
+    // ✅ Unit optional in edit
+  unit: Joi.string().valid("quantity", "kg", "liters").optional().messages({
+    "any.only": "Unit must be one of: quantity, kg, or liters",
+  }),
+    // ✅ Dynamic fields required conditionally
+  quantity: Joi.when("unit", {
+    is: "quantity",
+    then: Joi.number().min(1).required().messages({
+      "any.required": "Quantity is required when unit is 'quantity'",
+      "number.base": "Quantity must be a number",
+      "number.min": "Quantity must be at least 1",
+    }),
+    otherwise: Joi.optional(),
+  }),
+
+  weight: Joi.when("unit", {
+    is: "kg",
+    then: Joi.number().min(0.1).required().messages({
+      "any.required": "Weight is required when unit is 'kg'",
+      "number.base": "Weight must be a number",
+      "number.min": "Weight must be at least 0.1 kg",
+    }),
+    otherwise: Joi.optional(),
+  }),
+
+  volume: Joi.when("unit", {
+    is: "liters",
+    then: Joi.number().min(0.1).required().messages({
+      "any.required": "Volume is required when unit is 'liters'",
+      "number.base": "Volume must be a number",
+      "number.min": "Volume must be at least 0.1 L",
+    }),
+    otherwise: Joi.optional(),
   }),
   description: Joi.string().allow("").max(500).messages({
     "string.max": "Description should not exceed 500 characters",
@@ -160,4 +227,27 @@ export const validateProductDelete = (product) => {
     images: Joi.array().items(Joi.string().uri()).optional(),
   });
   return schema.validate(product);
+};
+
+
+// ------------------------------
+// Fetch category name of a single product
+// ------------------------------
+export const fetchProductCategory = async (productId) => {
+  if (!productId) throw new Error("Product ID is required");
+
+  try {
+    const res = await axios.get(`${API_BASE_URL}/admin/api/products/product/${productId}/category`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+     // Return both categoryId and categoryName
+    return {
+      id: res.data.data?.categoryId || null,
+      name: res.data.data?.categoryName || "Unknown Category",
+    };
+  } catch (err) {
+    console.error("Error fetching product category:", err);
+    return "Unknown Category";
+  }
 };

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Mail, Lock, Loader2 } from "lucide-react";
-import JSTcliqBlue from "assets/JSTcliqBlue.jpeg";
+import JSTcliqBlue from "assets/TransparentJstCliq.png";
 import { useAuthContext } from "app/contexts/auth/context";
 import { DASHBOARD_HOME_PATH } from "constants/app.constant.js";
 import { setSession } from "utils/jwt";

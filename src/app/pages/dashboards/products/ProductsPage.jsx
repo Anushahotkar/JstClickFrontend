@@ -1,3 +1,5 @@
+/*productsPage.jsx*/
+
 /* ProductsPage.jsx */
 
 import { useState, useEffect, useCallback } from "react";

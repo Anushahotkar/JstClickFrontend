@@ -62,17 +62,27 @@ const ServiceCard = ({
       {/* Content */}
       <div className="flex flex-col flex-1 w-full items-center text-center">
         {/* Name */}
-        <h2 className="text-sm sm:text-base md:text-lg font-bold text-gray-800 break-words line-clamp-2 mb-1">
+        <h2 className="text-sm sm:text-base md:text-lg  justify-text font-bold text-gray-800 break-words mb-1 text-center">
           {service.name}
         </h2>
 
+        
+        {/* Wage Type */}
+        {service?.wageType && (
+          <span className="text-xs sm:text-sm md:text-sm text-indigo-600 font-medium mb-2 px-2 py-0.5 bg-indigo-100 rounded-full">
+            {service?.wageType}
+          </span>
+        )}
+
         {/* Description */}
         {service.description ? (
-          <p className="text-xs sm:text-sm md:text-base text-gray-600 break-words line-clamp-3 mb-3">
+          <p className="text-xs sm:text-sm md:text-base justify-text text-gray-600 break-words mb-3 text-center">
             {service.description}
           </p>
         ) : (
-          <div className="mb-3" />
+            <p className="text-xs sm:text-sm md:text-base  justify-text text-gray-600 break-words mb-3 text-center">
+          {service.name} details
+          </p>
         )}
 
         {/* Cost & Actions pushed to bottom */}
