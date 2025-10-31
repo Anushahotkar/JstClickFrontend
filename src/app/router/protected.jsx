@@ -196,12 +196,19 @@ const protectedRoutes = {
             Component: (await import("app/pages/stock/Layout")).default,
           }),
           children: [
-            {
-              path: "stock",
-              lazy: async () => ({
-                Component: (await import("app/pages/stock/stock/StockManagement")).default,
-              }),
-            },
+              
+    {
+      path: "stock",
+      lazy: async () => ({
+        Component: (await import("app/pages/stock/stock/StockManagement")).default,
+      }),
+    },
+    {
+      path: "stock/:categoryId",
+      lazy: async () => ({
+        Component: (await import("app/pages/stock/StockManagementThings")).default,
+      }),
+    },
           
           ],
         },

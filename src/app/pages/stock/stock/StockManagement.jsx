@@ -1,79 +1,146 @@
-import  { useState, useEffect } from 'react';
-import { FaSpinner, FaPlus, FaBoxOpen } from 'react-icons/fa';
-import { Navigate } from 'react-router-dom';
+// src/pages/StockManagement.jsx
+import { useState, useEffect } from "react";
+import { FaBoxOpen, FaSearch } from "react-icons/fa";
+import { Navigate,useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
+import { fetchCategories } from "../../api/stockApi";
+import Spinner from "app/pages/dashboards/components/Spinner";
 
-// Protected Route Component
-const isAuthenticated = () => {
-  // A real-world check would involve checking a JWT or session token.
-  const token = localStorage.getItem('authToken');
-  return !!token;
-};
 
-const ProtectedRoute = ({ children }) => {
-  return isAuthenticated() ? children : <Navigate to="/login" />;
-};
+const isAuthenticated = () => !!localStorage.getItem("authToken");
 
-// Mock API Call
-const fetchCategories = async () => {
-  // This would be your actual API call to a Node/Express/MongoDB backend.
-  // For this example, we'll use a hardcoded data set.
-  return [
-    'Fruits', 'Vegetables', 'Groceries', 'Medical', 'Leafy', 'Dairy',
-    'Snacks', 'Drinks', 'Toiletaries', 'Kitchen Essentials', 'Confectionary',
-    'Beauty', 'Home Essentials', 'Facecare'
-  ];
-};
+
+
+
+const ProtectedRoute = ({ children }) =>
+  isAuthenticated() ? children : <Navigate to="/login" />;
 
 const StockManagement = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+
+
+const handleCardClick = (cat) => {
+  // const type = cat.type ;
+  navigate(`/stock-management/stock/${cat._id}?type=${cat.type}`);
+};
 
   useEffect(() => {
-    const getCategories = async () => {
-      const fetchedCategories = await fetchCategories();
-      setCategories(fetchedCategories);
-      setLoading(false);
+    const loadCategories = async () => {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        toast.error("No authentication token found. Please log in again.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const data = await fetchCategories(token);
+        const productCategories = (data?.productCategories || []).map(cat => ({
+  ...cat,
+  type: "product",
+}));
+const serviceCategories = (data?.serviceCategories || []).map(cat => ({
+  ...cat,
+  type: "service",
+}));
+        const allCategories = [
+         ...productCategories, 
+         ...serviceCategories
+        ];
+        setCategories(allCategories);
+      } catch (error) {
+        toast.error(error.toString());
+      } finally {
+        setLoading(false);
+      }
     };
-    getCategories();
+
+    loadCategories();
   }, []);
 
-  if (loading) {
+  if (loading)
     return (
-      <div className="flex justify-center items-center h-screen text-2xl font-semibold text-gray-700">
-        <FaSpinner className="animate-spin mr-2" /> Loading...
+      <div className="flex justify-center items-center h-screen">
+        <Spinner size="large" color="primary" />
       </div>
     );
-  }
+
+  const filteredCategories = categories.filter((cat) =>
+    cat.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <ProtectedRoute>
-      <div className="bg-gray-50 min-h-screen p-4 md:p-8 font-sans flex flex-col items-center">
-        <div className="max-w-6xl w-full mx-auto bg-white shadow-xl rounded-lg p-6 md:p-10 text-center">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 flex items-center">
-              <FaBoxOpen className="mr-3 text-blue-500" />
+      <div className="bg-gray-50 min-h-screen px-3 sm:px-6 lg:px-10 py-6 flex flex-col items-center">
+        <div className="max-w-7xl w-full bg-white shadow-xl rounded-2xl p-5 sm:p-8 md:p-10">
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4 sm:gap-6">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-800 flex items-center text-center sm:text-left">
+              <FaBoxOpen className="mr-2 sm:mr-3 text-indigo-600" />
               Stock Management
             </h1>
+
+            <div className="relative w-full sm:w-72 md:w-80">
+              <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search categories..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm sm:text-base"
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
-            {categories.map((category, index) => (
-              <div 
-                key={index} 
-                className="bg-gray-100 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-6 flex flex-col items-center justify-center cursor-pointer transform hover:scale-105"
-              >
-                <div className="text-xl font-semibold text-gray-700 text-center">
-                  {category}
+          <div
+            className="
+              grid 
+              grid-cols-1
+              xs:grid-cols-2
+              sm:grid-cols-2
+              md:grid-cols-3
+              lg:grid-cols-4
+              xl:grid-cols-4
+              gap-4 sm:gap-6 md:gap-8
+            "
+          >
+            {filteredCategories.length > 0 ? (
+              filteredCategories.map((cat) => (
+                <div
+                  key={cat._id}
+                   onClick={() => handleCardClick(cat)}
+                  className="
+                    bg-gray-100 rounded-xl shadow-md 
+                    hover:shadow-lg transition-all duration-300 
+                    p-4 sm:p-6 flex flex-col items-center justify-center hover:scale-105
+                    min-h-[200px] sm:min-h-[220px] md:min-h-[240px]
+                    text-center
+                  "
+                >
+                  {cat.image ? (
+                    <img
+                      src={cat.image}
+                      alt={cat.name}
+                      className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 object-cover rounded-full mb-4 border border-gray-300"
+                    />
+                  ) : (
+                    <FaBoxOpen className="text-5xl text-gray-400 mb-4" />
+                  )}
+
+                  <h3 className="text-base sm:text-lg md:text-xl font-semibold text-gray-800 break-words whitespace-normal">
+                    {cat.name}
+                  </h3>
                 </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center text-gray-500 font-medium">
+                {searchQuery
+                  ? "No categories match your search."
+                  : "No categories found."}
               </div>
-            ))}
-          </div>
-
-          <div className="mt-10">
-            <button className="bg-blue-600 text-white px-8 py-3 rounded-full text-lg font-semibold shadow-md hover:bg-blue-700 transition-colors duration-300 flex items-center justify-center mx-auto">
-              <FaPlus className="mr-2" />
-              Create New Category
-            </button>
+            )}
           </div>
         </div>
       </div>

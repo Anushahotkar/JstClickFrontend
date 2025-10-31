@@ -15,7 +15,8 @@ import AssignVendorsModal from "../AssignServiceVendors";
 import { toast } from "react-hot-toast";
 
 const isAuthenticated = () => !!localStorage.getItem("authToken");
-const ProtectedRoute = ({ children }) => (isAuthenticated() ? children : <Navigate to="/login" />);
+const ProtectedRoute = ({ children }) =>
+  isAuthenticated() ? children : <Navigate to="/login" />;
 
 const ServiceOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -32,8 +33,14 @@ const ServiceOrders = () => {
     const loadOrders = async () => {
       try {
         const data = await fetchServiceOrders(token);
-        setOrders(data);
-        setFilteredOrders(data);
+        const validOrders = data.filter(
+          (order) =>
+            order.serviceName &&
+            order.serviceName.trim() !== "" &&
+            order.serviceName.trim().toLowerCase() !== "n/a"
+        );
+        setOrders(validOrders);
+        setFilteredOrders(validOrders);
       } catch (err) {
         console.error(err);
         toast.error("Failed to load service orders");
@@ -44,28 +51,23 @@ const ServiceOrders = () => {
     loadOrders();
   }, [token]);
 
-useEffect(() => {
-  const term = searchTerm.toLowerCase();
+  useEffect(() => {
+    const term = searchTerm.toLowerCase();
+    const filtered = orders.filter((order) => {
+      const vendorDisplayName =
+        order?.userType?.toLowerCase() === "admin" || /admin/i.test(order.vendorName)
+          ? "jstcliq"
+          : order.vendorName?.toLowerCase() || "";
 
-  const filtered = orders.filter((order) => {
-    // Handle vendor name substitution for search
-    const vendorDisplayName =
-      order?.userType?.toLowerCase() === "admin" || /admin/i.test(order.vendorName)
-        ? "jstcliq"
-        : order.vendorName?.toLowerCase() || "";
-
-    const fields = [
-      order.serviceName?.toLowerCase() || "",
-      order.username?.toLowerCase() || "",
-      vendorDisplayName,
-    ];
-
-    return fields.some((field) => field.includes(term));
-  });
-
-  setFilteredOrders(filtered);
-}, [searchTerm, orders]);
-
+      const fields = [
+        order.serviceName?.toLowerCase() || "",
+        order.username?.toLowerCase() || "",
+        vendorDisplayName,
+      ];
+      return fields.some((field) => field.includes(term));
+    });
+    setFilteredOrders(filtered);
+  }, [searchTerm, orders]);
 
   const getStatusStyle = (status) => {
     switch (status) {
@@ -142,13 +144,13 @@ useEffect(() => {
   return (
     <ProtectedRoute>
       <div className="bg-gray-50 min-h-screen p-4 sm:p-6 font-sans">
-        <div className="max-w-7xl mx-auto bg-white rounded-2xl overflow-hidden shadow">
+        <div className="max-w-7xl mx-auto bg-white rounded-2xl overflow-hidden shadow-md">
           {/* Header + Search */}
-          <div className="p-4 sm:p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center gap-2">
+          <div className="p-4 md:p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-2">
               <FaExternalLinkAlt className="text-indigo-600" /> Service Orders
             </h1>
-            <div className="relative w-full sm:w-80">
+            <div className="relative w-full sm:w-72 md:w-80">
               <FaSearch className="absolute left-3 top-3 text-gray-400" />
               <input
                 type="text"
@@ -168,8 +170,8 @@ useEffect(() => {
           ) : (
             <>
               {/* Desktop Table */}
-              <div className="hidden md:block overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-100">
                     <tr>
                       {[
@@ -192,10 +194,13 @@ useEffect(() => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {filteredOrders.map((order, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50 transition text-sm">
-                        <td className="px-4 py-4 font-medium text-gray-900">{order.serviceName}</td>
-                        <td className="px-4 py-4 text-gray-600">{order.username}</td>
-                        <td className="px-4 py-4 text-gray-600">{getVendorName(order.vendorName)}</td>
+                      <tr
+                        key={idx}
+                        className="hover:bg-gray-50 transition text-gray-700"
+                      >
+                        <td className="px-4 py-4 font-medium">{order.serviceName}</td>
+                        <td className="px-4 py-4">{order.username}</td>
+                        <td className="px-4 py-4">{getVendorName(order.vendorName)}</td>
                         <td className="px-4 py-4">
                           <span
                             className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getStatusStyle(
@@ -206,8 +211,8 @@ useEffect(() => {
                             {order.status}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-gray-600">{formatDate(order.availedOn)}</td>
-                        <td className="px-4 py-4 text-gray-600">{formatDate(order.completedOn)}</td>
+                        <td className="px-4 py-4">{formatDate(order.availedOn)}</td>
+                        <td className="px-4 py-4">{formatDate(order.completedOn)}</td>
                         <td className="px-4 py-4">
                           <button
                             disabled={isAssigned(order) || assigning || order.status !== "Upcoming"}
@@ -230,17 +235,19 @@ useEffect(() => {
                 </table>
               </div>
 
-              {/* Mobile Responsive Cards */}
-              <div className="md:hidden p-4 space-y-4">
+              {/* Tablet + Mobile Cards */}
+              <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
                 {filteredOrders.map((order, idx) => (
                   <div
                     key={idx}
                     className="bg-white shadow rounded-lg p-4 flex flex-col gap-2 border border-gray-200 hover:shadow-md transition"
                   >
                     <div className="flex justify-between items-center">
-                      <h2 className="font-semibold text-gray-900">{order.serviceName}</h2>
+                      <h2 className="font-semibold text-gray-900 text-base sm:text-lg">
+                        {order.serviceName}
+                      </h2>
                       <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full border ${getStatusStyle(
+                        className={`px-2 py-1 text-xs sm:text-sm font-semibold rounded-full border ${getStatusStyle(
                           order.status
                         )}`}
                       >

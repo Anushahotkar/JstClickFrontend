@@ -53,10 +53,17 @@ const handleAssignVendor = async (vendor) => {
     const token = localStorage.getItem("authToken");
     if (!token) return console.warn("No auth token found");
 
+console.log(
+  "orderId "+orderId,
+  "vendorId "+vendor.id,
+  "vendorType "+vendor.userType,
+  "token "+token
+)
+
     const res = await assignVendorToOrder({
       orderId,
-      vendorId: vendor._id,     // make sure backend returns `_id` in posters
-      vendorType: vendor.userType,
+      vendorId: vendor.id,     // make sure backend returns `_id` in posters
+      vendorType:vendor.userType,
       token,
     });
 
